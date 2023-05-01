@@ -18,7 +18,7 @@ class Application:
 
         while True:
             try:
-                if len(self.choice_reaching_collector.dataset) > 1000:
+                if len(self.choice_reaching_collector.dataset) > 1000000:
                     util.write_tracking_file(
                         datetime.datetime.now().strftime("%Y%m%d-%H%M%S" + ".csv"),
                         self.choice_reaching_collector.dataset,
