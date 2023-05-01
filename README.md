@@ -14,10 +14,16 @@ This app tracks the users mouse movements and keyboard strokes [1] [2]. A base m
 
 ## How to install
 1. Clone the repo.
-2. CD into the directory.
-3. Launch a virtual environment.
-4. Pip install the requirements.
-5. Run `python main.py`.
+2. `$cd chillpill`.
+3. Create and activate a virtual environment.
+4. Install the requirements `$pip3 install -r requirements.txt`.
+5. Run `$python3 main.py`.
+
+
+## How to use
+Root privileges are required to run the app in order to capture keyboard strokes [4].
+1. Run `$sudo python3 main.py`.
+2. End the program by pressing `ctrl+c`.
 
 
 ## Privacy
@@ -30,3 +36,5 @@ This app runs locally on your machine. All of your data is stored locally and is
 [2] [Keystroke/mouse usage based emotion detection and user identification](https://www.researchgate.net/publication/315865602_Keystrokemouse_usage_based_emotion_detection_and_user_identification)
 
 [3] [ChatGPT](https://openai.com/blog/chatgpt)
+
+[4] [pynput Platform Limitations](https://pynput.readthedocs.io/en/latest/limitations.html#mac-osx)
