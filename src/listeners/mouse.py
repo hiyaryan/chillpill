@@ -19,7 +19,6 @@ class MouseListener:
         else:
             self.choice_reaching_collector.add_row(data={"release": 1})
 
-        print(button.value)
         print("{0} at {1}".format("Pressed" if pressed else "Released", (x, y)))
 
     def on_scroll(self, x, y, dx, dy):
