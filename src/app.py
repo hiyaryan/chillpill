@@ -9,6 +9,7 @@ from util.console import ConsoleMenu
 from util.timer import Timer
 
 import datetime
+import os
 
 
 class Application:
@@ -56,6 +57,7 @@ class Application:
                 ):
                     self.feeling_selected = True
                     self.toggle_listening()
+                    self.activate_window()
 
                     feeling = self.menu.run().chosen_menu_index
                     self.choice_reaching_collector.set_feeling(feeling)
@@ -89,6 +91,11 @@ class Application:
             except KeyboardInterrupt:
                 self.stop_listeners()
                 break
+
+    def activate_window(self):
+        # bring the terminal window to the front using osascript
+        if os.name == "posix":
+            os.system("osascript -e 'tell application \"Terminal\" to activate'")
 
     def start_listeners(self):
         self.mouse_listener.listener.start()
