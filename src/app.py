@@ -1,15 +1,57 @@
 from listeners.mouse import MouseListener
 from listeners.keyboard import KeyboardListener
 
+import listeners.keyboard as virtual_keyboard
+
 import collector.choice_reaching as cr
 from collector.choice_reaching import ChoiceReaching
 
 import util.file as file
+import util.console as console
+
 from util.console import ConsoleMenu
 from util.timer import Timer
 
 import datetime
 import os
+
+
+usage = """
+Usage: sudo python3 main.py
+
+Hotkeys:
+    ctrl+q: quit
+    ctrl+m: open the main menu
+    ctrl+h: print this help message
+    ctrl+c: force quit
+
+Menus:
+    Main Menu:
+        [1] Resume
+        [2] Check-in
+        [3] Mode
+        [4] Config
+
+    Check-in:
+        [1] bad
+        [2] okay
+        [3] neutral
+        [4] good
+        [5] great
+
+    Mental Modes:
+        [1] normal
+        [2] focus
+        [3] back
+
+    Config Menu:
+        [1] Set batch size
+        [2] Set idle limit
+        [3] Set dataset size
+        [4] Back
+"""
+
+modes = {}
 
 
 class Application:
@@ -28,16 +70,27 @@ class Application:
         )
 
         # initialize the menu
-        self.menu = ConsoleMenu(
-            title="How are you feeling?",
-            options=["[1] bad", "[2] okay", "[3] neutral", "[4] good", "[5] great"],
-        )
+        self.console = ConsoleMenu()
 
     def run(self):
-        self.start_listeners()
+        print(usage)
 
+        self.start_listeners()
         while True:
             try:
+                # check if hotkey is pressed
+                if self.keyboard_listener.hotkey in virtual_keyboard.global_hot_keys:
+                    # respond to the hotkey
+                    if (
+                        virtual_keyboard.global_hot_keys[self.keyboard_listener.hotkey]
+                        == "quit"
+                    ):
+                        self.stop_listeners()
+                        break
+
+                    else:
+                        self.respond_to_hotkey()
+
                 # write the data to a file every 100,000 samples
                 if len(self.choice_reaching_collector.dataset) >= file.MAX_DATASET_SIZE:
                     file.write_tracking_file(
@@ -57,9 +110,10 @@ class Application:
                 ):
                     self.feeling_selected = True
                     self.toggle_listening()
-                    self.activate_window()
+                    self.activate_window()  # bring the terminal to the front
 
-                    feeling = self.menu.run().chosen_menu_index
+                    # open the check-in menu
+                    feeling = self.console.open_menu("check-in")
                     self.choice_reaching_collector.set_feeling(feeling)
                     self.choice_reaching_collector.add_batch()
                     self.choice_reaching_collector.reset_batch()
@@ -108,3 +162,24 @@ class Application:
     def toggle_listening(self):
         self.mouse_listener.listening = not self.mouse_listener.listening
         self.keyboard_listener.listening = not self.keyboard_listener.listening
+
+    def respond_to_hotkey(self):
+        """
+        Respond to the hotkey pressed.
+        """
+
+        if (
+            virtual_keyboard.global_hot_keys[self.keyboard_listener.hotkey]
+            == "main-menu"
+        ):
+            self.toggle_listening()
+            # open the main menu
+            choice = self.console.open_menu("main-menu")
+            self.console.process_main_menu_choice(self, choice)
+
+            self.keyboard_listener.clear_hotkey()
+            self.toggle_listening()
+
+        elif virtual_keyboard.global_hot_keys[self.keyboard_listener.hotkey] == "help":
+            # print the usage
+            print(usage)
