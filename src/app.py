@@ -87,7 +87,24 @@ class Application:
         self.feeling_selected = False
 
         # initialize the collector
-        self.choice_reaching_collector = ChoiceReaching()
+        # if a saved shot exists, load it
+        if os.path.exists(file.get_saved_shot_path("wip.json")):
+            print("Saved shot found. Loading...")
+
+            # initialize the collector with the saved shot
+            saved_shot = file.load_saved_shot_file("wip.json")
+            self.choice_reaching_collector = ChoiceReaching(saved_shot["dataset"])
+            choice_reaching.MAX_BATCH_SIZE = saved_shot["config"]["batch_size"]
+            timer.IDLE_LIMIT = saved_shot["config"]["idle_limit"]
+            file.MAX_DATASET_SIZE = saved_shot["config"]["dataset_size"]
+
+            # remove the saved shot
+            os.remove(file.get_saved_shot_path("wip.json"))
+
+        # otherwise, initialize the collector with a new dataset
+        else:
+            print("No saved shot found. Initializing new dataset...")
+            self.choice_reaching_collector = ChoiceReaching()
 
         # initialize the listeners for mouse and keyboard
         self.mouse_listener = MouseListener(self.choice_reaching_collector, self.timer)
@@ -167,8 +184,27 @@ class Application:
                 break
 
     def quit(self):
-        # TODO: Should save progress on working dataset. If less than 100000 save to WIP file. On startup load the dataset from the WIP file and continue. Use pickle to save the dataset as a dictionary instead of a CSV.
         self.stop_listeners()
+
+        if (
+            len(self.choice_reaching_collector.dataset) / choice_reaching.MAX_BATCH_SIZE
+            > 1
+        ):
+            file.SAVED_SHOT_TEMPLATE["config"] = {
+                "batch_size": choice_reaching.MAX_BATCH_SIZE,
+                "idle_limit": timer.IDLE_LIMIT,
+                "dataset_size": file.MAX_DATASET_SIZE,
+            }
+
+            file.SAVED_SHOT_TEMPLATE["dataset"] = self.choice_reaching_collector.dataset
+
+            file.write_saved_shot_file(
+                datetime.datetime.now().strftime("wip" + ".json"),
+                file.SAVED_SHOT_TEMPLATE,
+            )
+
+            print("Shot saved.")
+
         exit()
 
     def activate_window(self):
