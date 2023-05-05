@@ -24,6 +24,7 @@ Hotkeys:
     ctrl+q: quit
     ctrl+m: open the main menu
     ctrl+h: print this help message
+    ctrl+v: toggle verbosity
     ctrl+c: force quit
 
 Menus:
@@ -214,6 +215,11 @@ class Application:
 
         elif virtual_keyboard.global_hot_keys[self.keyboard_listener.hotkey] == "help":
             print(usage)
+
+        elif (
+            virtual_keyboard.global_hot_keys[self.keyboard_listener.hotkey] == "verbose"
+        ):
+            self.choice_reaching_collector.toggle_verbosity()
 
         elif virtual_keyboard.global_hot_keys[self.keyboard_listener.hotkey] == "quit":
             self.quit()

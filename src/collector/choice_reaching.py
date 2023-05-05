@@ -12,6 +12,13 @@ class ChoiceReaching:
         self.dataset = [FIELDS]
         self.batch = []
         self.feeling = -1
+        self.is_verbose = True
+
+    def toggle_verbosity(self):
+        """
+        Toggle verbose mode.
+        """
+        self.is_verbose = not self.is_verbose
 
     def set_feeling(self, feeling):
         """
@@ -51,5 +58,7 @@ class ChoiceReaching:
 
         row[field_index["feeling"]] = self.feeling
 
-        print(row)
+        if self.is_verbose:
+            print(row)
+
         self.batch.append(row)
