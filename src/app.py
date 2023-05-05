@@ -177,14 +177,26 @@ class Application:
             os.system("osascript -e 'tell application \"Terminal\" to activate'")
 
     def start_listeners(self):
+        """
+        Start and wait for the listeners to become ready.
+        """
         self.mouse_listener.listener.start()
+        self.mouse_listener.listener.wait()
+
         self.keyboard_listener.listener.start()
+        self.keyboard_listener.listener.wait()
 
     def stop_listeners(self):
+        """
+        Stop the listeners.
+        """
         self.mouse_listener.listener.stop()
         self.keyboard_listener.listener.stop()
 
     def toggle_listening(self):
+        """
+        Toggle the listening flags to resume or pause listening.
+        """
         self.mouse_listener.listening = not self.mouse_listener.listening
         self.keyboard_listener.listening = not self.keyboard_listener.listening
 
@@ -192,7 +204,6 @@ class Application:
         """
         Respond to the hotkey pressed.
         """
-
         if (
             virtual_keyboard.global_hot_keys[self.keyboard_listener.hotkey]
             == "main-menu"
