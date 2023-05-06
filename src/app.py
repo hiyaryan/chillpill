@@ -112,7 +112,7 @@ Configuration loaded:
 
         # otherwise, initialize the collector with a new dataset
         else:
-            print("No `wip.json` file found. Initializing new dataset...")
+            print("No `wip.json` file found. Initializing new dataset...\n")
             self.choice_reaching_collector = ChoiceReaching()
 
         # initialize the listeners for mouse and keyboard
