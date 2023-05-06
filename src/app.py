@@ -82,14 +82,15 @@ modes = {
 
 class Application:
     def __init__(self):
-        self.timer = Timer()
+        print(usage)
 
+        self.timer = Timer()
         self.feeling_selected = False
 
         # initialize the collector
         # if a saved shot exists, load it
         if os.path.exists(file.get_saved_shot_path("wip.json")):
-            print("Saved shot found. Loading...")
+            print("`wip.json` file found. Resuming progress...")
 
             # initialize the collector with the saved shot
             saved_shot = file.load_saved_shot_file("wip.json")
@@ -98,12 +99,20 @@ class Application:
             timer.IDLE_LIMIT = saved_shot["config"]["idle_limit"]
             file.MAX_DATASET_SIZE = saved_shot["config"]["dataset_size"]
 
+            print(
+                f"""
+Configuration loaded:
+    Batch size: {choice_reaching.MAX_BATCH_SIZE} samples
+    Idle limit: {timer.IDLE_LIMIT / 60 / 1e9} minutes
+    Dataset size: {file.MAX_DATASET_SIZE / choice_reaching.MAX_BATCH_SIZE} batches, {file.MAX_DATASET_SIZE} samples\n"""
+            )
+
             # remove the saved shot
             os.remove(file.get_saved_shot_path("wip.json"))
 
         # otherwise, initialize the collector with a new dataset
         else:
-            print("No saved shot found. Initializing new dataset...")
+            print("No `wip.json` file found. Initializing new dataset...")
             self.choice_reaching_collector = ChoiceReaching()
 
         # initialize the listeners for mouse and keyboard
@@ -116,9 +125,11 @@ class Application:
         self.console = ConsoleMenu()
 
     def run(self):
-        print(usage)
-
+        # start listeners but do not listen for input until both are ready
+        self.toggle_listening()
         self.start_listeners()
+        self.toggle_listening()
+
         while True:
             try:
                 # check if hotkey is pressed
@@ -137,7 +148,7 @@ class Application:
                     self.choice_reaching_collector.reset_batch()
                     self.choice_reaching_collector.reset_dataset()
 
-                # ask the user how they are feeling every 2500 samples
+                # ask the user how they are feeling every n samples
                 elif (
                     not self.feeling_selected
                     and len(self.choice_reaching_collector.batch)
@@ -203,7 +214,7 @@ class Application:
                 file.SAVED_SHOT_TEMPLATE,
             )
 
-            print("Shot saved.")
+            print("\nProgress saved.")
 
         exit()
 

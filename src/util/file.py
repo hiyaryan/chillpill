@@ -28,7 +28,10 @@ def write_tracking_file(filename, dataset):
 
 
 def get_saved_shot_path(filename):
-    return os.path.join(SAVED_SHOT_PATH, filename)
+    saved_shot_path = os.path.join(SAVED_SHOT_PATH, filename)
+    if not os.path.exists(os.path.dirname(saved_shot_path)):
+        os.makedirs(os.path.dirname(saved_shot_path))
+    return saved_shot_path
 
 
 def write_saved_shot_file(filename, template):
