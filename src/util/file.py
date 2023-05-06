@@ -1,6 +1,7 @@
 import os
 import csv
 import json
+import pandas as pd
 
 TRACKING_PATH = os.path.join("data", "tracking")
 
@@ -25,6 +26,13 @@ def write_tracking_file(filename, dataset):
     with open(get_tracking_path(filename), "w") as csvfile:
         writer = csv.writer(csvfile, delimiter=",")
         writer.writerows(dataset)
+
+
+def load_tracking_file(filename):
+    """
+    Returns a pandas dataframe of the tracking data.
+    """
+    return pd.read_csv(get_tracking_path(filename))
 
 
 def get_saved_shot_path(filename):
