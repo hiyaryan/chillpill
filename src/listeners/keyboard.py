@@ -9,6 +9,7 @@ global_hot_keys = {
     "<ctrl>+<q>": "quit",
     "<ctrl>+<m>": "main-menu",
     "<ctrl>+<h>": "help",
+    "<ctrl>+<v>": "verbose",
 }
 
 
