@@ -82,12 +82,38 @@ modes = {
 
 class Application:
     def __init__(self):
-        self.timer = Timer()
+        print(usage)
 
+        self.timer = Timer()
         self.feeling_selected = False
 
         # initialize the collector
-        self.choice_reaching_collector = ChoiceReaching()
+        # if a saved shot exists, load it
+        if os.path.exists(file.get_saved_shot_path("wip.json")):
+            print("`wip.json` file found. Resuming progress...")
+
+            # initialize the collector with the saved shot
+            saved_shot = file.load_saved_shot_file("wip.json")
+            self.choice_reaching_collector = ChoiceReaching(saved_shot["dataset"])
+            choice_reaching.MAX_BATCH_SIZE = saved_shot["config"]["batch_size"]
+            timer.IDLE_LIMIT = saved_shot["config"]["idle_limit"]
+            file.MAX_DATASET_SIZE = saved_shot["config"]["dataset_size"]
+
+            print(
+                f"""
+Configuration loaded:
+    Batch size: {choice_reaching.MAX_BATCH_SIZE} samples
+    Idle limit: {timer.IDLE_LIMIT / 60 / 1e9} minutes
+    Dataset size: {file.MAX_DATASET_SIZE / choice_reaching.MAX_BATCH_SIZE} batches, {file.MAX_DATASET_SIZE} samples\n"""
+            )
+
+            # remove the saved shot
+            os.remove(file.get_saved_shot_path("wip.json"))
+
+        # otherwise, initialize the collector with a new dataset
+        else:
+            print("No `wip.json` file found. Initializing new dataset...\n")
+            self.choice_reaching_collector = ChoiceReaching()
 
         # initialize the listeners for mouse and keyboard
         self.mouse_listener = MouseListener(self.choice_reaching_collector, self.timer)
@@ -99,9 +125,11 @@ class Application:
         self.console = ConsoleMenu()
 
     def run(self):
-        print(usage)
-
+        # start listeners but do not listen for input until both are ready
+        self.toggle_listening()
         self.start_listeners()
+        self.toggle_listening()
+
         while True:
             try:
                 # check if hotkey is pressed
@@ -120,7 +148,7 @@ class Application:
                     self.choice_reaching_collector.reset_batch()
                     self.choice_reaching_collector.reset_dataset()
 
-                # ask the user how they are feeling every 2500 samples
+                # ask the user how they are feeling every n samples
                 elif (
                     not self.feeling_selected
                     and len(self.choice_reaching_collector.batch)
@@ -167,8 +195,27 @@ class Application:
                 break
 
     def quit(self):
-        # TODO: Should save progress on working dataset. If less than 100000 save to WIP file. On startup load the dataset from the WIP file and continue. Use pickle to save the dataset as a dictionary instead of a CSV.
         self.stop_listeners()
+
+        if (
+            len(self.choice_reaching_collector.dataset) / choice_reaching.MAX_BATCH_SIZE
+            > 1
+        ):
+            file.SAVED_SHOT_TEMPLATE["config"] = {
+                "batch_size": choice_reaching.MAX_BATCH_SIZE,
+                "idle_limit": timer.IDLE_LIMIT,
+                "dataset_size": file.MAX_DATASET_SIZE,
+            }
+
+            file.SAVED_SHOT_TEMPLATE["dataset"] = self.choice_reaching_collector.dataset
+
+            file.write_saved_shot_file(
+                datetime.datetime.now().strftime("wip" + ".json"),
+                file.SAVED_SHOT_TEMPLATE,
+            )
+
+            print("\nProgress saved.")
+
         exit()
 
     def activate_window(self):
