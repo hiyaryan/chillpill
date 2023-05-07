@@ -4,7 +4,7 @@ FIELDS = ["id", "time", "x", "y", "scroll", "press", "release", "feeling"]
 field_index = {elem: idx for idx, elem in enumerate(FIELDS)}
 
 # estimated batch of clean data that can be collected before idle timeout
-MAX_BATCH_SIZE = 2500
+MAX_BATCH_SIZE = 5000
 
 
 class ChoiceReaching:
