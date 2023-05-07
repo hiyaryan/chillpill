@@ -85,7 +85,6 @@ class Application:
         print(usage)
 
         self.timer = Timer()
-        self.feeling_selected = False
 
         # initialize the collector
         # if a saved shot exists, load it
@@ -137,7 +136,7 @@ Configuration loaded:
                     # respond to the hotkey
                     self.respond_to_hotkey()
 
-                # write the data to a file every 100,000 samples
+                # write the data to a file every n samples
                 if len(self.choice_reaching_collector.dataset) >= file.MAX_DATASET_SIZE:
                     file.write_tracking_file(
                         datetime.datetime.now().strftime("%Y%m%d-%H%M%S" + ".csv"),
@@ -150,12 +149,11 @@ Configuration loaded:
 
                 # ask the user how they are feeling every n samples
                 elif (
-                    not self.feeling_selected
+                    len(self.choice_reaching_collector.batch) > 1
                     and len(self.choice_reaching_collector.batch)
                     % choice_reaching.MAX_BATCH_SIZE
                     == 0
                 ):
-                    self.feeling_selected = True
                     self.toggle_listening()
                     self.activate_window()  # bring the terminal to the front
 
@@ -169,15 +167,6 @@ Configuration loaded:
                         f"Dataset length {len(self.choice_reaching_collector.dataset)}/{file.MAX_DATASET_SIZE}"
                     )
                     self.toggle_listening()
-
-                # reset the feeling selected flag
-                elif (
-                    self.feeling_selected
-                    and len(self.choice_reaching_collector.batch)
-                    % choice_reaching.MAX_BATCH_SIZE
-                    != 0
-                ):
-                    self.feeling_selected = False
 
                 # calculate the idle time
                 if (
