@@ -149,10 +149,8 @@ Configuration loaded:
 
                 # ask the user how they are feeling every n samples
                 elif (
-                    len(self.choice_reaching_collector.batch) > 1
-                    and len(self.choice_reaching_collector.batch)
-                    % choice_reaching.MAX_BATCH_SIZE
-                    == 0
+                    len(self.choice_reaching_collector.batch)
+                    >= choice_reaching.MAX_BATCH_SIZE
                 ):
                     self.toggle_listening()
                     self.activate_window()  # bring the terminal to the front

@@ -19,6 +19,9 @@ SAVED_SHOT_TEMPLATE = {
 
 
 def get_tracking_path(filename):
+    tracking_path = os.path.join(TRACKING_PATH, filename)
+    if not os.path.exists(os.path.dirname(tracking_path)):
+        os.makedirs(os.path.dirname(tracking_path))
     return os.path.join(TRACKING_PATH, filename)
 
 
