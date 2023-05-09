@@ -60,16 +60,15 @@ Configurations:
     dataset size: set the number of trials per dataset
 """
 
-# TODO: add the mental modes, this will be built-in default configurations, note the custom option will prompt the user with the config menu and will save the new custom mode to a config.json file. This is the only method that will save a new mode, if the user makes changes in config mode, then the configuration will only be saved in runtime memory.
 modes = {
     "normal": {
-        "MAX_BATCH_SIZE": 2500,
-        "IDLE_LIMIT": 5 * 60 * 1e9,
+        "MAX_BATCH_SIZE": 5000,
+        "IDLE_LIMIT": 10 * 60 * 1e9,
         "MAX_DATASET_SIZE": 5e4,
     },
     "focus": {
-        "MAX_BATCH_SIZE": 5000,
-        "IDLE_LIMIT": 10 * 60 * 1e9,
+        "MAX_BATCH_SIZE": 10000,
+        "IDLE_LIMIT": 5 * 60 * 1e9,
         "MAX_DATASET_SIZE": 1e5,
     },
     "custom": {
@@ -80,12 +79,12 @@ modes = {
 }
 
 
+# TODO: This class is getting too big, needs some refactoring. Move static methods to a separate utility file. Maybe move the menu/hotkey logic to a separate file as well. Needs some cleanup and more documentation also.
 class Application:
     def __init__(self):
         print(usage)
 
         self.timer = Timer()
-        self.feeling_selected = False
 
         # initialize the collector
         # if a saved shot exists, load it
@@ -137,7 +136,7 @@ Configuration loaded:
                     # respond to the hotkey
                     self.respond_to_hotkey()
 
-                # write the data to a file every 100,000 samples
+                # write the data to a file every n samples
                 if len(self.choice_reaching_collector.dataset) >= file.MAX_DATASET_SIZE:
                     file.write_tracking_file(
                         datetime.datetime.now().strftime("%Y%m%d-%H%M%S" + ".csv"),
@@ -150,12 +149,9 @@ Configuration loaded:
 
                 # ask the user how they are feeling every n samples
                 elif (
-                    not self.feeling_selected
-                    and len(self.choice_reaching_collector.batch)
-                    % choice_reaching.MAX_BATCH_SIZE
-                    == 0
+                    len(self.choice_reaching_collector.batch)
+                    >= choice_reaching.MAX_BATCH_SIZE
                 ):
-                    self.feeling_selected = True
                     self.toggle_listening()
                     self.activate_window()  # bring the terminal to the front
 
@@ -169,15 +165,6 @@ Configuration loaded:
                         f"Dataset length {len(self.choice_reaching_collector.dataset)}/{file.MAX_DATASET_SIZE}"
                     )
                     self.toggle_listening()
-
-                # reset the feeling selected flag
-                elif (
-                    self.feeling_selected
-                    and len(self.choice_reaching_collector.batch)
-                    % choice_reaching.MAX_BATCH_SIZE
-                    != 0
-                ):
-                    self.feeling_selected = False
 
                 # calculate the idle time
                 if (

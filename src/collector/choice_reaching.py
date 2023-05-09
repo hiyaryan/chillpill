@@ -4,20 +4,20 @@ FIELDS = ["id", "time", "x", "y", "scroll", "press", "release", "feeling"]
 field_index = {elem: idx for idx, elem in enumerate(FIELDS)}
 
 # estimated batch of clean data that can be collected before idle timeout
-MAX_BATCH_SIZE = 2500
+MAX_BATCH_SIZE = 5000
 
 
 class ChoiceReaching:
     def __init__(self, dataset=[FIELDS]):
         self.dataset = dataset
         self.batch = []
-        self.feeling = -1
 
     def set_feeling(self, feeling):
         """
-        Set the feeling.
+        Set the feeling for the completed batch.
         """
-        self.feeling = feeling
+        for row in self.batch:
+            row[field_index["feeling"]] = feeling
 
     def reset_batch(self):
         """
@@ -49,7 +49,7 @@ class ChoiceReaching:
         for field in data.keys():
             row[field_index[field]] = data[field]
 
-        row[field_index["feeling"]] = self.feeling
+        row[field_index["feeling"]] = -1
 
         print(row)
         self.batch.append(row)
