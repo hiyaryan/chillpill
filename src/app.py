@@ -16,6 +16,8 @@ from util.timer import Timer
 import datetime
 import os
 
+from gui import chat
+
 
 usage = """
 Usage: sudo python3 main.py
@@ -160,6 +162,10 @@ Configuration loaded:
                     self.choice_reaching_collector.set_feeling(check_in_choice)
                     self.choice_reaching_collector.add_batch()
                     self.choice_reaching_collector.reset_batch()
+
+                    # launch chat if user selects OK or BAD
+                    if check_in_choice < 2:
+                        chat.launch()
 
                     print(
                         f"Dataset length {len(self.choice_reaching_collector.dataset)}/{file.MAX_DATASET_SIZE}"
