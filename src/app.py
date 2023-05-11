@@ -108,9 +108,6 @@ Configuration loaded:
     Dataset size: {file.MAX_DATASET_SIZE / choice_reaching.MAX_BATCH_SIZE} batches, {file.MAX_DATASET_SIZE} samples\n"""
             )
 
-            # remove the saved shot
-            os.remove(file.get_saved_shot_path("wip.json"))
-
         # otherwise, initialize the collector with a new dataset
         else:
             print("No `wip.json` file found. Initializing new dataset...\n")
@@ -148,6 +145,10 @@ Configuration loaded:
                     print("Dataset written to file.")
                     self.choice_reaching_collector.reset_batch()
                     self.choice_reaching_collector.reset_dataset()
+
+                    # remove the saved shot if it exists
+                    if os.path.exists(file.get_saved_shot_path("wip.json")):
+                        os.remove(file.get_saved_shot_path("wip.json"))
 
                 # ask the user how they are feeling every n samples
                 elif (
