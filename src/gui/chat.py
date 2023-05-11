@@ -3,6 +3,8 @@ import flet as ft
 from gui.components.chat_message import ChatMessage
 from gui.components.message import Message
 
+from apis.ext import openai
+
 
 def main(page: ft.Page):
     page.horizontal_alignment = "stretch"
