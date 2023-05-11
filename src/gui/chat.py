@@ -1,49 +1,7 @@
 import flet as ft
 
-
-class Message:
-    def __init__(self, text: str, message_type: str):
-        self.user_name = "ME"
-        self.text = text
-        self.message_type = message_type
-
-
-class ChatMessage(ft.Row):
-    def __init__(self, message: Message):
-        super().__init__()
-        self.vertical_alignment = "center"
-        self.controls = [
-            ft.CircleAvatar(
-                content=ft.Text(message.user_name),
-                color=ft.colors.WHITE,
-                bgcolor=self.get_avatar_color(message.user_name),
-            ),
-            ft.Column(
-                [
-                    ft.Text(message.text, selectable=True),
-                ],
-                tight=True,
-                spacing=5,
-            ),
-        ]
-
-    def get_avatar_color(self, user_name: str):
-        colors_lookup = [
-            ft.colors.AMBER,
-            ft.colors.BLUE,
-            ft.colors.BROWN,
-            ft.colors.CYAN,
-            ft.colors.GREEN,
-            ft.colors.INDIGO,
-            ft.colors.LIME,
-            ft.colors.ORANGE,
-            ft.colors.PINK,
-            ft.colors.PURPLE,
-            ft.colors.RED,
-            ft.colors.TEAL,
-            ft.colors.YELLOW,
-        ]
-        return colors_lookup[hash(user_name) % len(colors_lookup)]
+from gui.components.chat_message import ChatMessage
+from gui.components.message import Message
 
 
 def main(page: ft.Page):
@@ -79,7 +37,8 @@ def main(page: ft.Page):
 
     def on_message(message: Message):
         if message.message_type == "chat_message":
-            m = ChatMessage(message)
+            chat_message = ChatMessage(message)
+            m = chat_message.row
         elif message.message_type == "login_message":
             m = ft.Text(message.text, italic=True, color=ft.colors.BLACK45, size=12)
         chat.controls.append(m)
