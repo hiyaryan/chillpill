@@ -24,6 +24,7 @@ def main(page: ft.Page):
                     feeling=SESSION_VARIABLES["feeling"],
                 ),
             )
+            SESSION_VARIABLES["user_name"] = join_user_name.value
             page.session.set("user_name", join_user_name.value)
             page.dialog.open = False
             page.pubsub.send_all(
@@ -51,8 +52,36 @@ def main(page: ft.Page):
                     message_type="chat_message",
                 )
             )
+
+            page.session.get("request").append_message(
+                role="user",
+                text=new_message.value,
+            )
             new_message.value = ""
             new_message.focus()
+
+            text = page.session.get("request").make_request(temperature=0.5)
+            if not text:
+                user_name = "Admin"
+                message_type = "admin_message"
+                text = "ChillBot is unable to respond at this time. Please close the chat and check back at a later."
+            else:
+                user_name = "ChillBot"
+                message_type = "chat_message"
+
+            page.pubsub.send_all(
+                Message(
+                    user_name=user_name,
+                    text=text,
+                    message_type=message_type,
+                )
+            )
+
+            page.session.get("request").append_message(
+                role="assistant",
+                text=text,
+            )
+
             page.update()
 
     def on_message(message: Message):
@@ -70,18 +99,34 @@ def main(page: ft.Page):
             chat.controls.append(m)
 
             if message.user_name == "bot":
+                page.session.get("request").append_context()
+                response = page.session.get("request").make_request(temperature=0.2)
+
                 m = Message(
                     user_name="ChillBot",
-                    text=page.session.get("request").initiate_chat(),
+                    text=response,
                     message_type="login_message",
                 )
 
                 chat_message = ChatMessage(m)
                 chat.controls.append(chat_message.row)
 
+        elif message.message_type == "admin_message":
+            m = ft.Text(
+                message.text,
+                italic=True,
+                color=ft.colors.RED,
+                size=12,
+            )
+            chat.controls.append(m)
+
         page.update()
 
     page.pubsub.subscribe(on_message)
+
+    # TODO: Only open dialog if user_name is not set. Initially, user_name is set to None until first chat session is closed. This is set in app.py.
+
+    # When the user_name is set, ChillBot should still send the first message and there should chat messages "__user_name__ has entered the chat." should still be sent.
 
     # A dialog asking for a user display name
     join_user_name = ft.TextField(
@@ -146,3 +191,4 @@ def launch(**kwargs):
     ft.app(target=main)
 
     print("Chat closed.")
+    return SESSION_VARIABLES

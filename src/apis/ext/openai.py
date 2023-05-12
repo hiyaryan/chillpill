@@ -20,10 +20,14 @@ def get_completion(prompt, model="gpt-3.5-turbo"):
 
 
 def get_completion_from_messages(messages, model="gpt-3.5-turbo", temperature=0):
+    print(messages)
+
     response = openai.ChatCompletion.create(
         model=model,
         messages=messages,
         temperature=temperature,
     )
+
+    print(response)
 
     return response
