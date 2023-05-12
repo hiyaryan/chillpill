@@ -27,6 +27,7 @@ Hotkeys:
     ctrl+m: open the main menu
     ctrl+h: print this help message
     ctrl+c: force quit
+    ctrl+o: open the chat
 
 Menus:
     Main Menu:
@@ -85,6 +86,9 @@ modes = {
 class Application:
     def __init__(self):
         print(usage)
+
+        # user name set on chat launch
+        self.user_name = None
 
         self.timer = Timer()
 
@@ -165,11 +169,6 @@ Configuration loaded:
                     self.choice_reaching_collector.set_feeling(check_in_choice)
                     self.choice_reaching_collector.add_batch()
                     self.choice_reaching_collector.reset_batch()
-
-                    # FIXME: Chat should launch on predicted feeling
-                    # launch chat if user selects OK or BAD
-                    # if check_in_choice < 2:
-                    #     chat.launch()
 
                     print(
                         f"Dataset length {len(self.choice_reaching_collector.dataset)}/{file.MAX_DATASET_SIZE}"
@@ -272,6 +271,18 @@ Configuration loaded:
 
         elif virtual_keyboard.global_hot_keys[self.keyboard_listener.hotkey] == "quit":
             self.quit()
+
+        elif virtual_keyboard.global_hot_keys[self.keyboard_listener.hotkey] == "chat":
+            chat_session_variables = chat.launch(
+                session_variables={
+                    "feeling": self.choice_reaching_collector.feeling,
+                    "user_name": self.user_name,
+                }
+            )
+
+            if not self.user_name:
+                self.user_name = chat_session_variables["user_name"]
+                print(f"User name set to {self.user_name}.")
 
     def get_choice_from_menu(self, terminal_menu):
         """
