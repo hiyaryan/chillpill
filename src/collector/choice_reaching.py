@@ -8,10 +8,10 @@ MAX_BATCH_SIZE = 5000
 
 
 class ChoiceReaching:
-    def __init__(self, dataset=[FIELDS]):
+    def __init__(self, dataset=[FIELDS], batch_size=1):
         self.dataset = dataset
         self.batch = []
-        self.batch_num = 1
+        self.batch_num = int(len(dataset) / batch_size)
         self.feeling = 2
 
     def set_feeling(self, feeling):

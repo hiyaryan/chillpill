@@ -95,7 +95,9 @@ class Application:
 
             # initialize the collector with the saved shot
             saved_shot = file.load_saved_shot_file("wip.json")
-            self.choice_reaching_collector = ChoiceReaching(saved_shot["dataset"])
+            self.choice_reaching_collector = ChoiceReaching(
+                saved_shot["dataset"], saved_shot["config"]["batch_size"]
+            )
             choice_reaching.MAX_BATCH_SIZE = saved_shot["config"]["batch_size"]
             timer.IDLE_LIMIT = saved_shot["config"]["idle_limit"]
             file.MAX_DATASET_SIZE = saved_shot["config"]["dataset_size"]
