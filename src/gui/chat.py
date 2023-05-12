@@ -3,7 +3,9 @@ import flet as ft
 from gui.components.chat_message import ChatMessage
 from gui.components.message import Message
 
-from apis.ext import openai
+from apis.request import Request
+
+SESSION_VARIABLES = {}
 
 
 def main(page: ft.Page):
@@ -15,10 +17,25 @@ def main(page: ft.Page):
             join_user_name.error_text = "Name cannot be blank!"
             join_user_name.update()
         else:
+            page.session.set(
+                "request",
+                Request(
+                    client_name=join_user_name.value,
+                    feeling=SESSION_VARIABLES["feeling"],
+                ),
+            )
             page.session.set("user_name", join_user_name.value)
             page.dialog.open = False
             page.pubsub.send_all(
                 Message(
+                    user_name="bot",
+                    text="ChillBot has entered the chat.",
+                    message_type="login_message",
+                )
+            )
+            page.pubsub.send_all(
+                Message(
+                    user_name=page.session.get("user_name"),
                     text="You have entered the chat.",
                     message_type="login_message",
                 )
@@ -29,6 +46,7 @@ def main(page: ft.Page):
         if new_message.value != "":
             page.pubsub.send_all(
                 Message(
+                    user_name=page.session.get("user_name"),
                     text=new_message.value,
                     message_type="chat_message",
                 )
@@ -40,10 +58,27 @@ def main(page: ft.Page):
     def on_message(message: Message):
         if message.message_type == "chat_message":
             chat_message = ChatMessage(message)
-            m = chat_message.row
+            chat.controls.append(chat_message.row)
+
         elif message.message_type == "login_message":
-            m = ft.Text(message.text, italic=True, color=ft.colors.BLACK45, size=12)
-        chat.controls.append(m)
+            m = ft.Text(
+                message.text,
+                italic=True,
+                color=ft.colors.BLACK45,
+                size=12,
+            )
+            chat.controls.append(m)
+
+            if message.user_name == "bot":
+                m = Message(
+                    user_name="ChillBot",
+                    text=page.session.get("request").initiate_chat(),
+                    message_type="login_message",
+                )
+
+                chat_message = ChatMessage(m)
+                chat.controls.append(chat_message.row)
+
         page.update()
 
     page.pubsub.subscribe(on_message)
@@ -104,5 +139,10 @@ def main(page: ft.Page):
     )
 
 
-def launch():
+def launch(**kwargs):
+    SESSION_VARIABLES.update(kwargs.get("session_variables", {}))
+
+    print("Launching chat...")
     ft.app(target=main)
+
+    print("Chat closed.")

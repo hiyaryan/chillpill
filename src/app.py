@@ -164,9 +164,10 @@ Configuration loaded:
                     self.choice_reaching_collector.add_batch()
                     self.choice_reaching_collector.reset_batch()
 
+                    # FIXME: Chat should launch on predicted feeling
                     # launch chat if user selects OK or BAD
-                    if check_in_choice < 2:
-                        chat.launch()
+                    # if check_in_choice < 2:
+                    #     chat.launch()
 
                     print(
                         f"Dataset length {len(self.choice_reaching_collector.dataset)}/{file.MAX_DATASET_SIZE}"

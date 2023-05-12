@@ -12,11 +12,13 @@ class ChoiceReaching:
         self.dataset = dataset
         self.batch = []
         self.batch_num = 1
+        self.feeling = 2
 
     def set_feeling(self, feeling):
         """
         Set the feeling for the completed batch.
         """
+        self.feeling = feeling
         for row in self.batch:
             row[field_index["feeling"]] = feeling
 
