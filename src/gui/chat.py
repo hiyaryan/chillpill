@@ -77,11 +77,6 @@ def main(page: ft.Page):
                 )
             )
 
-            page.session.get("request").append_message(
-                role="assistant",
-                text=text,
-            )
-
             page.update()
 
     def on_message(message: Message):

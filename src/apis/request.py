@@ -29,6 +29,7 @@ class Request:
             self.messages, temperature=temperature
         )
 
+        print(response)
         response_content = response.choices[0].message["content"]
 
         try:
@@ -47,6 +48,7 @@ class Request:
             self.messages.append(system.get_syntax_error_prompt())
             self.make_request(attempt=attempt + 1, temperature=temperature)
 
+        print(self.messages)
         return response
 
     def append_message(self, role, text):
