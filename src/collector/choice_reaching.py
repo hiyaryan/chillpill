@@ -1,6 +1,6 @@
 import time
 
-FIELDS = ["id", "time", "x", "y", "scroll", "press", "release", "feeling"]
+FIELDS = ["id", "batch", "time", "x", "y", "scroll", "press", "release", "feeling"]
 field_index = {elem: idx for idx, elem in enumerate(FIELDS)}
 
 # estimated batch of clean data that can be collected before idle timeout
@@ -8,14 +8,17 @@ MAX_BATCH_SIZE = 5000
 
 
 class ChoiceReaching:
-    def __init__(self, dataset=[FIELDS]):
+    def __init__(self, dataset=[FIELDS], batch_size=1):
         self.dataset = dataset
         self.batch = []
+        self.batch_num = int(len(dataset) / batch_size)
+        self.feeling = 2
 
     def set_feeling(self, feeling):
         """
         Set the feeling for the completed batch.
         """
+        self.feeling = feeling
         for row in self.batch:
             row[field_index["feeling"]] = feeling
 
@@ -27,15 +30,17 @@ class ChoiceReaching:
 
     def reset_dataset(self):
         """
-        Reset the dataset.
+        Reset the dataset and batch number.
         """
         self.dataset = [FIELDS]
+        self.batch_num = 1
 
     def add_batch(self):
         """
-        Add the working batch to the dataset.
+        Add the working batch to the dataset and increment batch number.
         """
         self.dataset.extend(self.batch)
+        self.batch_num += 1
 
     def add_row(self, data={}):
         """
@@ -44,6 +49,7 @@ class ChoiceReaching:
         row = [0] * len(FIELDS)
 
         row[field_index["id"]] = len(self.batch) + len(self.dataset)
+        row[field_index["batch"]] = self.batch_num
         row[field_index["time"]] = time.time()
 
         for field in data.keys():
