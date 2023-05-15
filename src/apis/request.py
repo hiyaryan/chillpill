@@ -2,7 +2,7 @@ from apis.ext.prompts import system
 from apis.ext.prompts import assistant
 
 from apis.ext import openai
-from urllib3 import request
+import socket
 
 
 class Request:
@@ -23,8 +23,8 @@ class Request:
         """
         # check for internet connection
         try:
-            request.urlopen("http://142.251.46.206", timeout=1)
-        except:
+            socket.create_connection(("1.1.1.1", 53))
+        except OSError:
             print("No internet connection.")
             return None
 
