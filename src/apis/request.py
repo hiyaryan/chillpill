@@ -2,6 +2,7 @@ from apis.ext.prompts import system
 from apis.ext.prompts import assistant
 
 from apis.ext import openai
+from urllib3 import request
 
 
 class Request:
@@ -20,8 +21,15 @@ class Request:
         Returns the response if the response is correct, otherwise, returns
         None.
         """
+        # check for internet connection
+        try:
+            request.urlopen("http://142.251.46.206", timeout=1)
+        except:
+            print("No internet connection.")
+            return None
+
+        # return None if the LLM is unable to correctly respond in 3 attempts.
         if attempt > 3:
-            # Return none if the LLM is unable to correctly respond in 3 attempts.
             return None
 
         # make a system request to the LLM
@@ -36,6 +44,9 @@ class Request:
             response = eval(response_content)["response"]
             self.append_message(role="assistant", text=response_content)
 
+            print(self.messages)
+            return response
+
         except TypeError:
             print("TypeError: Assistant did not format response correctly.")
             print(f"[Attempt {attempt + 1}] Re-requesting...")
@@ -47,9 +58,6 @@ class Request:
             print(f"[Attempt {attempt + 1}] Re-requesting...")
             self.messages.append(system.get_syntax_error_prompt())
             self.make_request(attempt=attempt + 1, temperature=temperature)
-
-        print(self.messages)
-        return response
 
     def append_message(self, role, text):
         """
