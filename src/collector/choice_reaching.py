@@ -6,6 +6,9 @@ field_index = {elem: idx for idx, elem in enumerate(FIELDS)}
 # estimated batch of clean data that can be collected before idle timeout
 MAX_BATCH_SIZE = 5000
 
+# estimated batch size for sufficient instances to represent a feeling
+MIN_BATCH_SIZE = 1000
+
 
 class ChoiceReaching:
     def __init__(self, dataset=[FIELDS], batch_size=1):

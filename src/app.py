@@ -194,7 +194,7 @@ Configuration loaded:
         self.stop_listeners()
 
         if (
-            len(self.choice_reaching_collector.dataset) / choice_reaching.MAX_BATCH_SIZE
+            len(self.choice_reaching_collector.dataset) / choice_reaching.MIN_BATCH_SIZE
             > 1
         ):
             file.SAVED_SHOT_TEMPLATE["config"] = {
@@ -307,6 +307,15 @@ Configuration loaded:
                     check_in_choice = action[choice]().chosen_menu_index
 
                 self.choice_reaching_collector.set_feeling(check_in_choice)
+
+                # add batch to dataset if it has the minimum size
+                if (
+                    len(self.choice_reaching_collector.batch)
+                    >= choice_reaching.MIN_BATCH_SIZE
+                ):
+                    self.choice_reaching_collector.add_batch()
+                    self.choice_reaching_collector.reset_batch()
+
                 return True  # close the main menu
 
             case "[3] Mode":
