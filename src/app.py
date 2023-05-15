@@ -16,6 +16,8 @@ from util.timer import Timer
 import datetime
 import os
 
+from gui import chat
+
 
 usage = """
 Usage: sudo python3 main.py
@@ -25,6 +27,7 @@ Hotkeys:
     ctrl+m: open the main menu
     ctrl+h: print this help message
     ctrl+c: force quit
+    ctrl+o: open the chat
 
 Menus:
     Main Menu:
@@ -84,6 +87,9 @@ class Application:
     def __init__(self):
         print(usage)
 
+        # user name set on chat launch
+        self.user_name = None
+
         self.timer = Timer()
 
         # initialize the collector
@@ -93,7 +99,9 @@ class Application:
 
             # initialize the collector with the saved shot
             saved_shot = file.load_saved_shot_file("wip.json")
-            self.choice_reaching_collector = ChoiceReaching(saved_shot["dataset"])
+            self.choice_reaching_collector = ChoiceReaching(
+                saved_shot["dataset"], saved_shot["config"]["batch_size"]
+            )
             choice_reaching.MAX_BATCH_SIZE = saved_shot["config"]["batch_size"]
             timer.IDLE_LIMIT = saved_shot["config"]["idle_limit"]
             file.MAX_DATASET_SIZE = saved_shot["config"]["dataset_size"]
@@ -105,9 +113,6 @@ Configuration loaded:
     Idle limit: {timer.IDLE_LIMIT / 60 / 1e9} minutes
     Dataset size: {file.MAX_DATASET_SIZE / choice_reaching.MAX_BATCH_SIZE} batches, {file.MAX_DATASET_SIZE} samples\n"""
             )
-
-            # remove the saved shot
-            os.remove(file.get_saved_shot_path("wip.json"))
 
         # otherwise, initialize the collector with a new dataset
         else:
@@ -146,6 +151,10 @@ Configuration loaded:
                     print("Dataset written to file.")
                     self.choice_reaching_collector.reset_batch()
                     self.choice_reaching_collector.reset_dataset()
+
+                    # remove the saved shot if it exists
+                    if os.path.exists(file.get_saved_shot_path("wip.json")):
+                        os.remove(file.get_saved_shot_path("wip.json"))
 
                 # ask the user how they are feeling every n samples
                 elif (
@@ -262,6 +271,18 @@ Configuration loaded:
 
         elif virtual_keyboard.global_hot_keys[self.keyboard_listener.hotkey] == "quit":
             self.quit()
+
+        elif virtual_keyboard.global_hot_keys[self.keyboard_listener.hotkey] == "chat":
+            chat_session_variables = chat.launch(
+                session_variables={
+                    "feeling": self.choice_reaching_collector.feeling,
+                    "user_name": self.user_name,
+                }
+            )
+
+            if not self.user_name:
+                self.user_name = chat_session_variables["user_name"]
+                print(f"User name set to {self.user_name}.")
 
     def get_choice_from_menu(self, terminal_menu):
         """
