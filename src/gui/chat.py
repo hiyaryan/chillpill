@@ -6,6 +6,47 @@ from gui.components.message import Message
 from apis.request import Request
 
 SESSION_VARIABLES = {}
+BOT = "ChillBot"
+
+
+def get_system_messages(user_name, text, message_type):
+    """
+    System messages are subtext messages appearing in between chat messages to
+    inform the user of certain events.
+    """
+
+    if message_type == "login_message":
+        text = f"{user_name} has entered the chat."
+
+    elif message_type == "offline_message":
+        text = f"{BOT} is unable to respond at this time. Please check your connection or close the chat and check back at a later."
+
+    return Message(user_name=user_name, text=text, message_type=message_type)
+
+
+def get_ft_text(message: Message):
+    """
+    Get various types of ft.Text objects based on the message type.
+    """
+
+    if message.message_type == "chat_message":
+        return ChatMessage(message).row
+
+    if message.message_type == "login_message":
+        return ft.Text(
+            message.text,
+            italic=True,
+            color=ft.colors.BLACK45,
+            size=12,
+        )
+
+    elif message.message_type == "offline_message":
+        return ft.Text(
+            message.text,
+            italic=True,
+            color=ft.colors.RED,
+            size=12,
+        )
 
 
 def main(page: ft.Page):
@@ -17,6 +58,7 @@ def main(page: ft.Page):
             join_user_name.error_text = "Name cannot be blank!"
             join_user_name.update()
         else:
+            # create a new request object and set it to the session
             page.session.set(
                 "request",
                 Request(
@@ -24,99 +66,77 @@ def main(page: ft.Page):
                     feeling=SESSION_VARIABLES["feeling"],
                 ),
             )
+            # append the context to the request messages
+            page.session.get("request").append_context()
+
             SESSION_VARIABLES["user_name"] = join_user_name.value
+
             page.session.set("user_name", join_user_name.value)
             page.dialog.open = False
             page.pubsub.send_all(
-                Message(
-                    user_name="bot",
-                    text="ChillBot has entered the chat.",
-                    message_type="login_message",
+                get_system_messages(
+                    page.session.get("user_name"), None, "login_message"
                 )
             )
-            page.pubsub.send_all(
-                Message(
-                    user_name=page.session.get("user_name"),
-                    text="You have entered the chat.",
-                    message_type="login_message",
-                )
-            )
-            page.update()
 
     def send_message_click(e):
         if new_message.value != "":
-            page.pubsub.send_all(
-                Message(
-                    user_name=page.session.get("user_name"),
-                    text=new_message.value,
-                    message_type="chat_message",
-                )
+            # get message and attach the user message to the chat
+            message = get_system_messages(
+                page.session.get("user_name"), new_message.value, "chat_message"
             )
+            page.pubsub.send_all(message)
 
+            # append the user message to the request messages
             page.session.get("request").append_message(
                 role="user",
                 text=new_message.value,
             )
+
+            # clear the textfield and focus on chat message
             new_message.value = ""
             new_message.focus()
 
-            text = page.session.get("request").make_request(temperature=0.5)
-            if not text:
-                user_name = "Admin"
-                message_type = "admin_message"
-                text = "ChillBot is unable to respond at this time. Please close the chat and check back at a later."
-            else:
-                user_name = "ChillBot"
+    def request_on_message(message_type):
+        """
+        A followup function that makes a request to the LLM when a message is
+        received from the pubsub.
+        """
+        response_text = page.session.get("request").make_request(temperature=0.2)
+        if response_text:
+            if message_type == "login_message":
+                # get the login message from the system
+                login_text = get_system_messages(BOT, None, "login_message")
+                flet_text = get_ft_text(login_text)
+                chat.controls.append(flet_text)
+                page.update()
+
+                # followup with a chat message
                 message_type = "chat_message"
 
-            page.pubsub.send_all(
-                Message(
-                    user_name=user_name,
-                    text=text,
-                    message_type=message_type,
-                )
-            )
+            message = get_system_messages(BOT, response_text, message_type)
+        else:
+            message = get_system_messages("System", None, "offline_message")
 
-            page.update()
+            # pop the user message from the request messages
+            page.session.get("request").pop_message()
 
-    def on_message(message: Message):
-        if message.message_type == "chat_message":
-            chat_message = ChatMessage(message)
-            chat.controls.append(chat_message.row)
-
-        elif message.message_type == "login_message":
-            m = ft.Text(
-                message.text,
-                italic=True,
-                color=ft.colors.BLACK45,
-                size=12,
-            )
-            chat.controls.append(m)
-
-            if message.user_name == "bot":
-                page.session.get("request").append_context()
-                response = page.session.get("request").make_request(temperature=0.2)
-
-                m = Message(
-                    user_name="ChillBot",
-                    text=response,
-                    message_type="login_message",
-                )
-
-                chat_message = ChatMessage(m)
-                chat.controls.append(chat_message.row)
-
-        elif message.message_type == "admin_message":
-            m = ft.Text(
-                message.text,
-                italic=True,
-                color=ft.colors.RED,
-                size=12,
-            )
-            chat.controls.append(m)
-
+        flet_text = get_ft_text(message)
+        chat.controls.append(flet_text)
         page.update()
 
+    def on_message(message: Message):
+        """
+        This function is subscribed to the pubsub. Every message submitted by
+        the user is followed by a request to the LLM.
+        """
+        ft_text = get_ft_text(message)
+        chat.controls.append(ft_text)
+        page.update()
+
+        request_on_message(message.message_type)
+
+    # Subscribe to the pubsub
     page.pubsub.subscribe(on_message)
 
     # TODO: Only open dialog if user_name is not set. Initially, user_name is set to None until first chat session is closed. This is set in app.py.

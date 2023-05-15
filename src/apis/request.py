@@ -41,11 +41,11 @@ class Request:
         response_content = response.choices[0].message["content"]
 
         try:
-            response = eval(response_content)["response"]
+            response_text = eval(response_content)["response"]
             self.append_message(role="assistant", text=response_content)
 
             print(self.messages)
-            return response
+            return response_text
 
         except TypeError:
             print("TypeError: Assistant did not format response correctly.")
@@ -66,6 +66,14 @@ class Request:
         """
         # TODO: This may be a good spot to filter through the messages and send on the most recent messages or a summary of the conversation written by the LLM
         self.messages.append(system.get_message(role, text))
+
+    def pop_message(self):
+        """
+        Pops the last message from this array of messages. This can be used to
+        remove messages that not have been received by the LLM to prevent
+        message duplication which could use more tokens.
+        """
+        self.messages.pop()
 
     def append_context(self):
         """
