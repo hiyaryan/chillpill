@@ -9,6 +9,75 @@ SESSION_VARIABLES = {}
 BOT = "ChillBot"
 
 
+def get_dialog(page):
+    try:
+        user_name = SESSION_VARIABLES["user_name"]
+
+    except KeyError:
+        page.window_close()
+
+    def close(e):
+        page.window_close()
+
+    def join_chat_click(e):
+        if not join_user_name.value:
+            join_user_name.error_text = "Name cannot be blank!"
+            join_user_name.update()
+        else:
+            # create a new request object and set it to the session
+            SESSION_VARIABLES["user_name"] = join_user_name.value
+            initiate_session(e)
+
+    def initiate_session(e):
+        page.session.set(
+            "request",
+            Request(
+                client_name=SESSION_VARIABLES["user_name"],
+                feeling=SESSION_VARIABLES["feeling"],
+            ),
+        )
+        # append the context to the request messages
+        page.session.get("request").append_context()
+
+        page.session.set("user_name", SESSION_VARIABLES["user_name"])
+        page.dialog.open = False
+        page.pubsub.send_all(
+            get_system_messages(page.session.get("user_name"), None, "login_message")
+        )
+
+    # TODO: Implement on_click for Feedback button.
+    if user_name:
+        button_options = [
+            ft.ElevatedButton(text="Join chat", on_click=initiate_session),
+            ft.ElevatedButton(text="Exit", on_click=close),
+            # ft.ElevatedButton(text="Feedback", on_click=close),
+        ]
+
+        page.dialog = ft.AlertDialog(
+            open=True,
+            modal=True,
+            title=ft.Text(f"Welcome, {user_name}!", text_align="center"),
+            content=ft.Row(controls=button_options, tight=True, alignment="center"),
+            actions_alignment="end",
+        )
+
+    else:
+        # A dialog asking for a user display name
+        join_user_name = ft.TextField(
+            label="Enter your name to join the chat",
+            autofocus=True,
+            on_submit=join_chat_click,
+        )
+        page.dialog = ft.AlertDialog(
+            open=True,
+            modal=True,
+            title=ft.Text("Welcome!"),
+            content=ft.Column([join_user_name], width=300, height=70, tight=True),
+            actions=[ft.ElevatedButton(text="Join chat", on_click=join_chat_click)],
+            actions_alignment="end",
+        )
+
+
 def get_system_messages(user_name, text, message_type):
     """
     System messages are subtext messages appearing in between chat messages to
@@ -52,32 +121,6 @@ def get_ft_text(message: Message):
 def main(page: ft.Page):
     page.horizontal_alignment = "stretch"
     page.title = "Chat"
-
-    def join_chat_click(e):
-        if not join_user_name.value:
-            join_user_name.error_text = "Name cannot be blank!"
-            join_user_name.update()
-        else:
-            # create a new request object and set it to the session
-            page.session.set(
-                "request",
-                Request(
-                    client_name=join_user_name.value,
-                    feeling=SESSION_VARIABLES["feeling"],
-                ),
-            )
-            # append the context to the request messages
-            page.session.get("request").append_context()
-
-            SESSION_VARIABLES["user_name"] = join_user_name.value
-
-            page.session.set("user_name", join_user_name.value)
-            page.dialog.open = False
-            page.pubsub.send_all(
-                get_system_messages(
-                    page.session.get("user_name"), None, "login_message"
-                )
-            )
 
     def send_message_click(e):
         if new_message.value != "":
@@ -139,24 +182,8 @@ def main(page: ft.Page):
     # Subscribe to the pubsub
     page.pubsub.subscribe(on_message)
 
-    # TODO: Only open dialog if user_name is not set. Initially, user_name is set to None until first chat session is closed. This is set in app.py.
-
-    # When the user_name is set, ChillBot should still send the first message and there should chat messages "__user_name__ has entered the chat." should still be sent.
-
-    # A dialog asking for a user display name
-    join_user_name = ft.TextField(
-        label="Enter your name to join the chat",
-        autofocus=True,
-        on_submit=join_chat_click,
-    )
-    page.dialog = ft.AlertDialog(
-        open=True,
-        modal=True,
-        title=ft.Text("Welcome!"),
-        content=ft.Column([join_user_name], width=300, height=70, tight=True),
-        actions=[ft.ElevatedButton(text="Join chat", on_click=join_chat_click)],
-        actions_alignment="end",
-    )
+    # Get a dialog under certain conditions
+    get_dialog(page)
 
     # Chat messages
     chat = ft.ListView(
