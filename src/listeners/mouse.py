@@ -17,17 +17,23 @@ class MouseListener:
     def on_move(self, x, y):
         if self.listening:
             self.timer.last_active_time = time.time_ns()
-            self.choice_reaching_collector.add_row(data={"x": x, "y": y})
+            self.choice_reaching_collector.add_row(
+                data={"input_type": 1, "x": x, "y": y}
+            )
 
     def on_click(self, x, y, button, pressed):
         if self.listening:
             self.timer.last_active_time = time.time_ns()
             if pressed:
-                self.choice_reaching_collector.add_row(data={"press": 1})
+                self.choice_reaching_collector.add_row(
+                    data={"input_type": 2, "press": 1}
+                )
             else:
-                self.choice_reaching_collector.add_row(data={"release": 1})
+                self.choice_reaching_collector.add_row(
+                    data={"input_type": 2, "release": 1}
+                )
 
     def on_scroll(self, x, y, dx, dy):
         if self.listening:
             self.timer.last_active_time = time.time_ns()
-            self.choice_reaching_collector.add_row(data={"scroll": 1})
+            self.choice_reaching_collector.add_row(data={"input_type": 4, "scroll": 1})

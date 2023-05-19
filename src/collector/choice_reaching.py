@@ -1,6 +1,17 @@
 import time
 
-FIELDS = ["id", "batch", "time", "x", "y", "scroll", "press", "release", "feeling"]
+FIELDS = [
+    "id",
+    "batch",
+    "time",
+    "input_type",
+    "x",
+    "y",
+    "scroll",
+    "press",
+    "release",
+    "feeling",
+]
 field_index = {elem: idx for idx, elem in enumerate(FIELDS)}
 
 # estimated batch of clean data that can be collected before idle timeout
