@@ -48,7 +48,9 @@ class KeyboardListener:
 
                 press = 1
 
-            self.choice_reaching_collector.add_row(data={"press": press})
+            self.choice_reaching_collector.add_row(
+                data={"input_type": 3, "press": press}
+            )
 
     def on_release(self, key):
         if self.listening:
@@ -62,4 +64,6 @@ class KeyboardListener:
 
                 release = 1
 
-            self.choice_reaching_collector.add_row(data={"release": release})
+            self.choice_reaching_collector.add_row(
+                data={"input_type": 3, "release": release}
+            )
