@@ -3,23 +3,18 @@ import csv
 import json
 import pandas as pd
 
+# paths to data directories
 TRACKING_PATH = os.path.join("data", "tracking")
-
-# the maximum number of samples to collect before writing to a file
-MAX_DATASET_SIZE = 1e5
-
-# preprocessed data path
 PREPROCESSED_PATH = os.path.join("data", "preprocessed")
+SAVED_SHOT_PATH = os.path.join("data", "saved")
 
-# preprocessed paths to individual input types
+# paths to individual input types of preprocessed tracking data
 MOUSE_MOTION_TRACKING_PATH = os.path.join(PREPROCESSED_PATH, "mouse_motion")
 MOUSE_CLICK_TRACKING_PATH = os.path.join(PREPROCESSED_PATH, "mouse_click")
 KEYBOARD_INPUT_TRACKING_PATH = os.path.join(PREPROCESSED_PATH, "keyboard_input")
 SCROLLING_TRACKING_PATH = os.path.join(PREPROCESSED_PATH, "scrolling")
 
-# path for data saved on program quit
-SAVED_SHOT_PATH = os.path.join("data", "saved")
-
+# template for WIP file
 SAVED_SHOT_TEMPLATE = {
     "config": {},
     "dataset": [],

@@ -1,4 +1,5 @@
 import time
+import util.constants as constants
 
 FIELDS = [
     "id",
@@ -14,19 +15,16 @@ FIELDS = [
 ]
 field_index = {elem: idx for idx, elem in enumerate(FIELDS)}
 
-# estimated batch of clean data that can be collected before idle timeout
-MAX_BATCH_SIZE = 5000
 
-# estimated batch size for sufficient instances to represent a feeling
-MIN_BATCH_SIZE = 1000
-
-
-class ChoiceReaching:
+class TrackingCollector:
     def __init__(self, dataset=[FIELDS], batch_size=1):
         self.dataset = dataset
         self.batch = []
         self.batch_num = int(len(dataset) / batch_size)
         self.feeling = 2
+        self.max_dataset_size = constants.MAX_DATASET_SIZE
+        self.max_batch_size = constants.MAX_BATCH_SIZE
+        self.min_batch_size = constants.MIN_BATCH_SIZE
 
     def set_feeling(self, feeling):
         """

@@ -1,5 +1,5 @@
 from pynput import keyboard
-from collector.choice_reaching import ChoiceReaching
+from collectors.tracking import TrackingCollector
 from util.timer import Timer
 
 import time
@@ -14,8 +14,8 @@ global_hot_keys = {
 
 
 class KeyboardListener:
-    def __init__(self, choice_reaching_collector: ChoiceReaching, timer: Timer):
-        self.choice_reaching_collector = choice_reaching_collector
+    def __init__(self, tracking_collector: TrackingCollector, timer: Timer):
+        self.tracking_collector = tracking_collector
         self.listener = keyboard.Listener(
             on_press=self.on_press, on_release=self.on_release
         )
@@ -48,9 +48,7 @@ class KeyboardListener:
 
                 press = 1
 
-            self.choice_reaching_collector.add_row(
-                data={"input_type": 3, "press": press}
-            )
+            self.tracking_collector.add_row(data={"input_type": 3, "press": press})
 
     def on_release(self, key):
         if self.listening:
@@ -64,6 +62,4 @@ class KeyboardListener:
 
                 release = 1
 
-            self.choice_reaching_collector.add_row(
-                data={"input_type": 3, "release": release}
-            )
+            self.tracking_collector.add_row(data={"input_type": 3, "release": release})
