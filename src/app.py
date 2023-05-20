@@ -6,12 +6,9 @@ import listeners.keyboard as virtual_keyboard
 from collectors.tracking import TrackingCollector
 
 import util.file as file_util
-import util.constants as constants
 import util.console as console
-import util.timer as timer
 
 from util.console import ConsoleMenu
-from util.timer import Timer
 
 import datetime
 import os
@@ -63,35 +60,13 @@ Configurations:
     dataset size: set the number of trials per dataset
 """
 
-modes = {
-    "normal": {
-        "MAX_BATCH_SIZE": 5000,
-        "IDLE_LIMIT": 10 * 60 * 1e9,
-        "MAX_DATASET_SIZE": 5e4,
-    },
-    "focus": {
-        "MAX_BATCH_SIZE": 10000,
-        "IDLE_LIMIT": 5 * 60 * 1e9,
-        "MAX_DATASET_SIZE": 1e5,
-    },
-    "custom": {
-        "MAX_BATCH_SIZE": 0,
-        "IDLE_LIMIT": 0,
-        "MAX_DATASET_SIZE": 0,
-    },
-}
 
-
-# TODO: This class is getting too big, needs some refactoring. Move static methods to a separate utility file. Maybe move the menu/hotkey logic to a separate file as well. Needs some cleanup and more documentation also.
 class App:
     def __init__(self):
         print(usage)
 
         # user name set on chat launch
         self.user_name = None
-
-        # TODO: Move timer into tracking collector
-        self.timer = Timer()
 
         # initialize the collector
         # if a saved shot exists, load it
@@ -103,22 +78,8 @@ class App:
 
             # initialize the collector with the contents of the WIP file
             self.tracking_collector = TrackingCollector(
-                saved_shot["dataset"], saved_shot["config"]["batch_size"]
-            )
-
-            self.tracking_collector.max_dataset_size = saved_shot["config"][
-                "dataset_size"
-            ]
-            self.tracking_collector.max_batch_size = saved_shot["config"]["batch_size"]
-
-            self.timer.idle_limit = saved_shot["config"]["idle_limit"]
-
-            print(
-                f"""
-Configuration loaded:
-    Dataset size: {self.tracking_collector.max_dataset_size / self.tracking_collector.max_batch_size} batches, {self.tracking_collector.max_dataset_size} samples
-    Batch size: {self.tracking_collector.max_batch_size} samples
-    Idle limit: {self.timer.idle_limit / 60 / 1e9} minutes\n"""
+                dataset=saved_shot["dataset"],
+                config=saved_shot["config"],
             )
 
         # otherwise, initialize the collector with a new dataset
@@ -127,9 +88,13 @@ Configuration loaded:
             self.tracking_collector = TrackingCollector()
 
         # initialize the listeners for mouse and keyboard
-        self.mouse_listener = MouseListener(self.tracking_collector, self.timer)
+        self.mouse_listener = MouseListener(
+            self.tracking_collector, self.tracking_collector.timer
+        )
 
-        self.keyboard_listener = KeyboardListener(self.tracking_collector, self.timer)
+        self.keyboard_listener = KeyboardListener(
+            self.tracking_collector, self.tracking_collector.timer
+        )
 
         # initialize the menu
         self.console = ConsoleMenu()
@@ -186,7 +151,7 @@ Configuration loaded:
 
                 # calculate the idle time
                 if (
-                    self.timer.greater_than_idle_limit()
+                    self.tracking_collector.timer.greater_than_idle_limit()
                     and len(self.tracking_collector.batch) > 0
                 ):
                     print("Idle limit reached. Batch has been reset.")
@@ -207,17 +172,9 @@ Configuration loaded:
             / self.tracking_collector.min_batch_size
             > 1
         ):
-            # TODO: Write a function in file to update the saved shot template for App
-            file_util.SAVED_SHOT_TEMPLATE["config"] = {
-                "dataset_size": self.tracking_collector.max_dataset_size,
-                "batch_size": self.tracking_collector.max_batch_size,
-                "idle_limit": self.timer.idle_limit,
-            }
-            file_util.SAVED_SHOT_TEMPLATE["dataset"] = self.tracking_collector.dataset
-
             file_util.write_saved_shot_file(
+                self.tracking_collector,
                 datetime.datetime.now().strftime("wip" + ".json"),
-                file_util.SAVED_SHOT_TEMPLATE,
             )
 
             print("\nProgress saved.")
@@ -363,11 +320,11 @@ Configuration loaded:
         """
         match console.menus["mental-modes"]["options"][choice]:
             case "[1] normal":
-                self.set_mode(action[choice]())
+                self.tracking_collector.set_mode(action[choice]())
             case "[2] focus":
-                self.set_mode(action[choice]())
+                self.tracking_collector.set_mode(action[choice]())
             case "[3] custom":
-                self.set_mode(action[choice]())
+                self.tracking_collector.set_mode(action[choice]())
             case "[4] back":
                 action[choice]()
                 return False  # keep the main menu open
@@ -381,135 +338,24 @@ Configuration loaded:
         match console.menus["config"]["options"][choice]:
             case "[1] Set batch size":
                 input_batch_size = action[choice]
-                self.set_batch_size(App.get_float_from_input(input_batch_size))
+                self.tracking_collector.set_batch_size(
+                    App.get_float_from_input(input_batch_size)
+                )
             case "[2] Set idle limit":
                 input_idle_limit = action[choice]
-                self.set_idle_limit(App.get_float_from_input(input_idle_limit))
+                self.tracking_collector.set_idle_limit(
+                    App.get_float_from_input(input_idle_limit)
+                )
             case "[3] Set dataset size":
                 input_dataset_size = action[choice]
-                self.set_dataset_size(App.get_float_from_input(input_dataset_size))
+                self.tracking_collector.set_dataset_size(
+                    App.get_float_from_input(input_dataset_size)
+                )
             case "[4] Back":
                 action[choice]()
                 return True  # close the config menu
 
         return False  # keep the config menu open
-
-    # TODO: Move these into tracking collector
-    def set_mode(self, mode):
-        """
-        Set the mode.
-        """
-        if mode == "custom":
-            self.set_custom_mode()
-
-        else:
-            self.tracking_collector.max_dataset_size = modes[mode]["MAX_DATASET_SIZE"]
-            self.tracking_collector.max_batch_size = modes[mode]["MAX_BATCH_SIZE"]
-            self.timer.idle_limit = modes[mode]["IDLE_LIMIT"]
-
-        mode_info = f"""
-{mode} mode
-    Dataset size: {self.tracking_collector.max_dataset_size / self.tracking_collector.max_batch_size} batches, {self.tracking_collector.max_dataset_size} samples
-    Batch size: {self.tracking_collector.max_batch_size} samples
-    Idle limit: {self.timer.idle_limit / 60 / 1e9} minutes
-"""
-
-        print(mode_info)
-
-    def set_custom_mode(self):
-        """
-        Set the custom mode.
-        """
-        # set the batch size
-        while True:
-            try:
-                max_batch_size = int(input("Enter the max batch size: "))
-                if max_batch_size < 100:
-                    print("Batch size must contain at least 100 samples.")
-                    continue
-
-                self.tracking_collector.max_batch_size = max_batch_size
-                break
-
-            except ValueError:
-                print("Please enter a number.")
-                continue
-
-        # set the idle limit
-        while True:
-            try:
-                idle_limit = float(input("Enter the idle limit: ")) * 60 * 1e9
-                if idle_limit < 0.5:
-                    print("Idle limit must be at least 30 seconds.")
-                    continue
-
-                self.timer.idle_limit = idle_limit
-                break
-
-            except ValueError:
-                print("Please enter a number.")
-                continue
-
-        # set the dataset size
-        while True:
-            try:
-                max_dataset_size = (
-                    int(input("Enter the max dataset size: "))
-                    * self.tracking_collector.max_batch_size
-                )
-
-                if max_dataset_size < 1:
-                    print("Dataset size must contain at least one batch.")
-                    continue
-
-                self.tracking_collector.max_dataset_size = max_dataset_size
-                break
-
-            except ValueError:
-                print("Please enter a number.")
-                continue
-
-    def set_dataset_size(self, dataset_size):
-        """
-        Set the dataset size.
-        """
-        # ensure the dataset size is at least one batch
-        if dataset_size < 1:
-            print("Dataset size must contain at least one batch.")
-            return
-
-        # cast the dataset size to an integer
-        self.tracking_collector.max_dataset_size = (
-            int(dataset_size) * self.tracking_collector.max_batch_size
-        )
-        print(
-            f"Dataset size set to {self.tracking_collector.max_dataset_size / self.tracking_collector.max_batch_size} batches, {self.tracking_collector.max_dataset_size} samples"
-        )
-
-    def set_batch_size(self, batch_size):
-        """
-        Set the batch size.
-        """
-        # ensure the batch size is at least 100 samples
-        if batch_size < 100:
-            print("Batch size must contain at least 100 samples.")
-            return
-
-        # cast the batch size to an integer
-        self.tracking_collector.max_batch_size = int(batch_size)
-        print(f"Batch size set to {self.tracking_collector.max_batch_size} samples")
-
-    def set_idle_limit(self, idle_limit):
-        """
-        Set the idle limit.
-        """
-        # ensure the idle limit is at least 30 seconds
-        if idle_limit < 0.5:
-            print("Idle limit must be at least 30 seconds.")
-            return
-
-        self.timer.idle_limit = idle_limit * 60 * 1e9
-        print(f"Idle limit set to {self.timer.idle_limit / 60 / 1e9} minutes")
 
     @staticmethod
     def get_float_from_input(input_action):

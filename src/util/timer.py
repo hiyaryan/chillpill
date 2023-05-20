@@ -1,14 +1,12 @@
 import time
 
-import util.constants as constants
-
 
 class Timer:
-    def __init__(self):
+    def __init__(self, idle_limit):
         # initialize the active and idle time
         self.last_active_time = time.time_ns()
 
-        self.idle_limit = constants.IDLE_LIMIT
+        self.idle_limit = idle_limit
 
     def greater_than_idle_limit(self):
         """

@@ -3,6 +3,8 @@ import csv
 import json
 import pandas as pd
 
+import util.templates as templates
+
 # paths to data directories
 TRACKING_PATH = os.path.join("data", "tracking")
 PREPROCESSED_PATH = os.path.join("data", "preprocessed")
@@ -13,12 +15,6 @@ MOUSE_MOTION_TRACKING_PATH = os.path.join(PREPROCESSED_PATH, "mouse_motion")
 MOUSE_CLICK_TRACKING_PATH = os.path.join(PREPROCESSED_PATH, "mouse_click")
 KEYBOARD_INPUT_TRACKING_PATH = os.path.join(PREPROCESSED_PATH, "keyboard_input")
 SCROLLING_TRACKING_PATH = os.path.join(PREPROCESSED_PATH, "scrolling")
-
-# template for WIP file
-SAVED_SHOT_TEMPLATE = {
-    "config": {},
-    "dataset": [],
-}
 
 
 def get_tracking_path(filename):
@@ -100,9 +96,19 @@ def get_saved_shot_path(filename):
     return saved_shot_path
 
 
-def write_saved_shot_file(filename, template):
+def write_saved_shot_file(tracker, filename):
+    saved_shot = templates.SAVED_SHOT.copy()
+
+    saved_shot["config"] = {
+        "dataset_size": tracker.max_dataset_size,
+        "batch_size": tracker.max_batch_size,
+        "idle_limit": tracker.timer.idle_limit,
+    }
+
+    saved_shot["dataset"] = tracker.dataset
+
     with open(get_saved_shot_path(filename), "w") as jsonfile:
-        json.dump(template, jsonfile)
+        json.dump(saved_shot, jsonfile)
 
 
 def load_saved_shot_file(filename):
