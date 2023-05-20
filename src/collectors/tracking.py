@@ -1,46 +1,34 @@
 import time
-import util.constants as constants
-import util.templates as templates
 
 from util.timer import Timer
-
-
-FIELDS = [
-    "id",
-    "batch",
-    "time",
-    "input_type",
-    "x",
-    "y",
-    "scroll",
-    "press",
-    "release",
-    "feeling",
-]
-
-field_index = {elem: idx for idx, elem in enumerate(FIELDS)}
+from util.templates import MODES
+from util.constants import (
+    FIELDS,
+    IDLE_LIMIT,
+    MAX_DATASET_SIZE,
+    MAX_BATCH_SIZE,
+    MIN_BATCH_SIZE,
+)
 
 
 class TrackingCollector:
     def __init__(self, dataset=None, config=None):
+        self.field_index = {elem: idx for idx, elem in enumerate(FIELDS)}
+
         self.dataset = dataset if dataset else [FIELDS]
 
         self.batch = []
         self.batch_size = config["batch_size"] if config else 1
         self.batch_num = int(len(self.dataset) / self.batch_size)
 
-        self.idle_limit = config["idle_limit"] if config else constants.IDLE_LIMIT
+        self.idle_limit = config["idle_limit"] if config else IDLE_LIMIT
         self.timer = Timer(self.idle_limit)
 
         self.feeling = 2
 
-        self.max_dataset_size = (
-            config["dataset_size"] if config else constants.MAX_DATASET_SIZE
-        )
-        self.max_batch_size = (
-            config["batch_size"] if config else constants.MAX_BATCH_SIZE
-        )
-        self.min_batch_size = constants.MIN_BATCH_SIZE
+        self.max_dataset_size = config["dataset_size"] if config else MAX_DATASET_SIZE
+        self.max_batch_size = config["batch_size"] if config else MAX_BATCH_SIZE
+        self.min_batch_size = MIN_BATCH_SIZE
 
         if config:
             self.print_config()
@@ -51,14 +39,14 @@ class TrackingCollector:
         """
         row = [0] * len(FIELDS)
 
-        row[field_index["id"]] = len(self.batch) + len(self.dataset)
-        row[field_index["batch"]] = self.batch_num
-        row[field_index["time"]] = time.time()
+        row[self.field_index["id"]] = len(self.batch) + len(self.dataset)
+        row[self.field_index["batch"]] = self.batch_num
+        row[self.field_index["time"]] = time.time()
 
         for field in data.keys():
-            row[field_index[field]] = data[field]
+            row[self.field_index[field]] = data[field]
 
-        row[field_index["feeling"]] = -1
+        row[self.field_index["feeling"]] = -1
 
         print(row)
         self.batch.append(row)
@@ -69,7 +57,7 @@ class TrackingCollector:
         """
         self.feeling = feeling
         for row in self.batch:
-            row[field_index["feeling"]] = feeling
+            row[self.field_index["feeling"]] = feeling
 
     def set_dataset_size(self, dataset_size):
         """
@@ -145,9 +133,9 @@ class TrackingCollector:
             self.set_custom_mode()
 
         else:
-            self.max_dataset_size = templates.MODES[mode]["MAX_DATASET_SIZE"]
-            self.max_batch_size = templates.MODES[mode]["MAX_BATCH_SIZE"]
-            self.timer.idle_limit = templates.MODES[mode]["IDLE_LIMIT"]
+            self.max_dataset_size = MODES[mode]["MAX_DATASET_SIZE"]
+            self.max_batch_size = MODES[mode]["MAX_BATCH_SIZE"]
+            self.timer.idle_limit = MODES[mode]["IDLE_LIMIT"]
 
         self.print_config(mode)
 
@@ -162,7 +150,6 @@ class TrackingCollector:
                 if not self.set_batch_size(max_batch_size):
                     continue
 
-                self.max_batch_size = max_batch_size
                 break
 
             except ValueError:
@@ -172,11 +159,10 @@ class TrackingCollector:
         # set the idle limit
         while True:
             try:
-                idle_limit = float(input("Enter the idle limit: ")) * 60 * 1e9
+                idle_limit = float(input("Enter the idle limit: "))
                 if not self.set_idle_limit(idle_limit):
                     continue
 
-                self.timer.idle_limit = idle_limit
                 break
 
             except ValueError:
@@ -193,7 +179,6 @@ class TrackingCollector:
                 if not self.set_dataset_size(max_dataset_size):
                     continue
 
-                self.max_dataset_size = max_dataset_size
                 break
 
             except ValueError:

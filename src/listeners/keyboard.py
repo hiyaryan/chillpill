@@ -5,14 +5,6 @@ from util.timer import Timer
 import time
 
 
-global_hot_keys = {
-    "<ctrl>+<q>": "quit",
-    "<ctrl>+<m>": "main-menu",
-    "<ctrl>+<h>": "help",
-    "<ctrl>+<o>": "chat",
-}
-
-
 class KeyboardListener:
     def __init__(self, tracking_collector: TrackingCollector, timer: Timer):
         self.tracking_collector = tracking_collector

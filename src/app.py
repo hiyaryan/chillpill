@@ -1,69 +1,22 @@
-from listeners.mouse import MouseListener
-from listeners.keyboard import KeyboardListener
-
-import listeners.keyboard as virtual_keyboard
-
-from collectors.tracking import TrackingCollector
-
-import util.file as file_util
-import util.console as console
-
-from util.console import ConsoleMenu
-
 import datetime
 import os
 
+import util.file as file_util
+
+from collectors.tracking import TrackingCollector
+
+from listeners.mouse import MouseListener
+from listeners.keyboard import KeyboardListener
+
 from gui import chat
 
-
-usage = """
-Usage: sudo python3 main.py
-
-Hotkeys:
-    ctrl+q: quit
-    ctrl+m: open the main menu
-    ctrl+h: print this help message
-    ctrl+c: force quit
-    ctrl+o: open the chat
-
-Menus:
-    Main Menu:
-        [1] Resume
-        [2] Check-in
-        [3] Mode
-        [4] Config
-
-    Check-in:
-        [1] bad
-        [2] okay
-        [3] neutral
-        [4] good
-        [5] great
-
-    Mental Modes:
-        [1] normal
-        [2] focus
-        [3] custom
-        [4] back
-
-    Config Menu:
-        [1] Set batch size
-        [2] Set idle limit
-        [3] Set dataset size
-        [4] Back
-"""
-
-config_usage = """
-Configurations:
-    batch size: set the number of tracking instances per trial
-    idle limit: set the allowable idle minutes before a trial is reset
-    dataset size: set the number of trials per dataset
-"""
+from util.console import ConsoleMenu
+from util.constants import USAGE, GLOBAL_HOTKEYS, MENUS, CONFIG_USAGE
 
 
 class App:
     def __init__(self):
-        print(usage)
+        print(USAGE)
 
         # user name set on chat launch
         self.user_name = None
@@ -108,7 +61,7 @@ class App:
         while True:
             try:
                 # check if hotkey is pressed
-                if self.keyboard_listener.hotkey in virtual_keyboard.global_hot_keys:
+                if self.keyboard_listener.hotkey in GLOBAL_HOTKEYS:
                     # respond to the hotkey
                     self.respond_to_hotkey()
 
@@ -214,10 +167,7 @@ class App:
         """
         Respond to the hotkey pressed.
         """
-        if (
-            virtual_keyboard.global_hot_keys[self.keyboard_listener.hotkey]
-            == "main-menu"
-        ):
+        if GLOBAL_HOTKEYS[self.keyboard_listener.hotkey] == "main-menu":
             self.toggle_listening()
 
             # keep main menu open until the user quits
@@ -233,13 +183,13 @@ class App:
             self.keyboard_listener.clear_hotkey()
             self.toggle_listening()
 
-        elif virtual_keyboard.global_hot_keys[self.keyboard_listener.hotkey] == "help":
-            print(usage)
+        elif GLOBAL_HOTKEYS[self.keyboard_listener.hotkey] == "help":
+            print(USAGE)
 
-        elif virtual_keyboard.global_hot_keys[self.keyboard_listener.hotkey] == "quit":
+        elif GLOBAL_HOTKEYS[self.keyboard_listener.hotkey] == "quit":
             self.quit()
 
-        elif virtual_keyboard.global_hot_keys[self.keyboard_listener.hotkey] == "chat":
+        elif GLOBAL_HOTKEYS[self.keyboard_listener.hotkey] == "chat":
             chat_session_variables = chat.launch(
                 session_variables={
                     "feeling": self.tracking_collector.feeling,
@@ -267,7 +217,7 @@ class App:
         """
         Execute the main menu choice.
         """
-        match console.menus["main-menu"]["options"][choice]:
+        match MENUS["main-menu"]["options"][choice]:
             case "[2] Check-in":
                 check_in_choice = None
                 while check_in_choice == None:
@@ -296,7 +246,7 @@ class App:
             case "[4] Config":
                 config_menu_exit = False
                 while not config_menu_exit:
-                    print(config_usage)
+                    print(CONFIG_USAGE)
                     # ensure valid config menu choice
                     config_choice = None
                     while config_choice == None:
@@ -318,7 +268,7 @@ class App:
         """
         Execute the mode choice.
         """
-        match console.menus["mental-modes"]["options"][choice]:
+        match MENUS["mental-modes"]["options"][choice]:
             case "[1] normal":
                 self.tracking_collector.set_mode(action[choice]())
             case "[2] focus":
@@ -335,7 +285,7 @@ class App:
         """
         Execute the config choice.
         """
-        match console.menus["config"]["options"][choice]:
+        match MENUS["config"]["options"][choice]:
             case "[1] Set batch size":
                 input_batch_size = action[choice]
                 self.tracking_collector.set_batch_size(

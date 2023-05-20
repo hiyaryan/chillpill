@@ -3,7 +3,7 @@ import csv
 import json
 import pandas as pd
 
-import util.templates as templates
+from util.templates import SAVED_SHOT
 
 # paths to data directories
 TRACKING_PATH = os.path.join("data", "tracking")
@@ -97,7 +97,7 @@ def get_saved_shot_path(filename):
 
 
 def write_saved_shot_file(tracker, filename):
-    saved_shot = templates.SAVED_SHOT.copy()
+    saved_shot = SAVED_SHOT.copy()
 
     saved_shot["config"] = {
         "dataset_size": tracker.max_dataset_size,
