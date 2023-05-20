@@ -3,27 +3,18 @@ import csv
 import json
 import pandas as pd
 
+from util.templates import SAVED_SHOT
+
+# paths to data directories
 TRACKING_PATH = os.path.join("data", "tracking")
-
-# the maximum number of samples to collect before writing to a file
-MAX_DATASET_SIZE = 1e5
-
-# preprocessed data path
 PREPROCESSED_PATH = os.path.join("data", "preprocessed")
+SAVED_SHOT_PATH = os.path.join("data", "saved")
 
-# preprocessed paths to individual input types
+# paths to individual input types of preprocessed tracking data
 MOUSE_MOTION_TRACKING_PATH = os.path.join(PREPROCESSED_PATH, "mouse_motion")
 MOUSE_CLICK_TRACKING_PATH = os.path.join(PREPROCESSED_PATH, "mouse_click")
 KEYBOARD_INPUT_TRACKING_PATH = os.path.join(PREPROCESSED_PATH, "keyboard_input")
 SCROLLING_TRACKING_PATH = os.path.join(PREPROCESSED_PATH, "scrolling")
-
-# path for data saved on program quit
-SAVED_SHOT_PATH = os.path.join("data", "saved")
-
-SAVED_SHOT_TEMPLATE = {
-    "config": {},
-    "dataset": [],
-}
 
 
 def get_tracking_path(filename):
@@ -105,9 +96,19 @@ def get_saved_shot_path(filename):
     return saved_shot_path
 
 
-def write_saved_shot_file(filename, template):
+def write_saved_shot_file(tracker, filename):
+    saved_shot = SAVED_SHOT.copy()
+
+    saved_shot["config"] = {
+        "dataset_size": tracker.max_dataset_size,
+        "batch_size": tracker.max_batch_size,
+        "idle_limit": tracker.timer.idle_limit,
+    }
+
+    saved_shot["dataset"] = tracker.dataset
+
     with open(get_saved_shot_path(filename), "w") as jsonfile:
-        json.dump(template, jsonfile)
+        json.dump(saved_shot, jsonfile)
 
 
 def load_saved_shot_file(filename):

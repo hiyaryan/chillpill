@@ -1,45 +1,6 @@
 import simple_term_menu as stm
 
-menus = {
-    "main-menu": {
-        "title": "Main Menu",
-        "options": [
-            "[1] Resume",
-            "[2] Check-in",
-            "[3] Mode",
-            "[4] Config",
-            "[5] Quit",
-        ],
-    },
-    "check-in": {
-        "title": "How are you feeling?",
-        "options": [
-            "[1] bad",
-            "[2] okay",
-            "[3] neutral",
-            "[4] good",
-            "[5] great",
-        ],
-    },
-    "mental-modes": {
-        "title": "Select a Mode",
-        "options": [
-            "[1] normal",
-            "[2] focus",
-            "[3] custom",
-            "[4] back",
-        ],
-    },
-    "config": {
-        "title": "Config Menu",
-        "options": [
-            "[1] Set batch size",
-            "[2] Set idle limit",
-            "[3] Set dataset size",
-            "[4] Back",
-        ],
-    },
-}
+from util.constants import MENUS
 
 
 class ConsoleMenu:
@@ -53,7 +14,7 @@ class ConsoleMenu:
         return terminal_menu
 
     def get_terminal_menu(self, menu_name):
-        menu = menus[menu_name]
+        menu = MENUS[menu_name]
         self.title = menu["title"]
         self.options = menu["options"]
 
@@ -63,7 +24,7 @@ class ConsoleMenu:
         """
         Takes the index from the main menu and return an action to be performed.
         """
-        match menus["main-menu"]["options"][choice]:
+        match MENUS["main-menu"]["options"][choice]:
             case "[1] Resume":
                 return {choice: lambda: True}
             case "[2] Check-in":
@@ -79,7 +40,7 @@ class ConsoleMenu:
         """
         Takes the index from the mode menu and return an action to be performed.
         """
-        match menus["mental-modes"]["options"][choice]:
+        match MENUS["mental-modes"]["options"][choice]:
             case "[1] normal":
                 return {choice: lambda: "normal"}
             case "[2] focus":
@@ -93,7 +54,7 @@ class ConsoleMenu:
         """
         Takes the index from the config menu and return an action to be performed.
         """
-        match menus["config"]["options"][choice]:
+        match MENUS["config"]["options"][choice]:
             case "[1] Set batch size":
                 return {choice: lambda: input("Enter batch size: ")}
             case "[2] Set idle limit":
