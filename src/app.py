@@ -1,128 +1,52 @@
-from listeners.mouse import MouseListener
-from listeners.keyboard import KeyboardListener
-
-import listeners.keyboard as virtual_keyboard
-
-import collector.choice_reaching as choice_reaching
-from collector.choice_reaching import ChoiceReaching
-
-import util.file as file
-import util.console as console
-import util.timer as timer
-
-from util.console import ConsoleMenu
-from util.timer import Timer
-
 import datetime
 import os
 
+import util.file as file_util
+
+from collectors.tracking import TrackingCollector
+
+from listeners.mouse import MouseListener
+from listeners.keyboard import KeyboardListener
+
 from gui import chat
 
-
-usage = """
-Usage: sudo python3 main.py
-
-Hotkeys:
-    ctrl+q: quit
-    ctrl+m: open the main menu
-    ctrl+h: print this help message
-    ctrl+c: force quit
-    ctrl+o: open the chat
-
-Menus:
-    Main Menu:
-        [1] Resume
-        [2] Check-in
-        [3] Mode
-        [4] Config
-
-    Check-in:
-        [1] bad
-        [2] okay
-        [3] neutral
-        [4] good
-        [5] great
-
-    Mental Modes:
-        [1] normal
-        [2] focus
-        [3] custom
-        [4] back
-
-    Config Menu:
-        [1] Set batch size
-        [2] Set idle limit
-        [3] Set dataset size
-        [4] Back
-"""
-
-config_usage = """
-Configurations:
-    batch size: set the number of tracking instances per trial
-    idle limit: set the allowable idle minutes before a trial is reset
-    dataset size: set the number of trials per dataset
-"""
-
-modes = {
-    "normal": {
-        "MAX_BATCH_SIZE": 5000,
-        "IDLE_LIMIT": 10 * 60 * 1e9,
-        "MAX_DATASET_SIZE": 5e4,
-    },
-    "focus": {
-        "MAX_BATCH_SIZE": 10000,
-        "IDLE_LIMIT": 5 * 60 * 1e9,
-        "MAX_DATASET_SIZE": 1e5,
-    },
-    "custom": {
-        "MAX_BATCH_SIZE": 0,
-        "IDLE_LIMIT": 0,
-        "MAX_DATASET_SIZE": 0,
-    },
-}
+from util.console import ConsoleMenu
+from util.constants import USAGE, GLOBAL_HOTKEYS, MENUS, CONFIG_USAGE
 
 
-# TODO: This class is getting too big, needs some refactoring. Move static methods to a separate utility file. Maybe move the menu/hotkey logic to a separate file as well. Needs some cleanup and more documentation also.
-class Application:
+class App:
     def __init__(self):
-        print(usage)
+        print(USAGE)
 
         # user name set on chat launch
         self.user_name = None
 
-        self.timer = Timer()
-
         # initialize the collector
         # if a saved shot exists, load it
-        if os.path.exists(file.get_saved_shot_path("wip.json")):
+        if os.path.exists(file_util.get_saved_shot_path("wip.json")):
             print("`wip.json` file found. Resuming progress...")
 
-            # initialize the collector with the saved shot
-            saved_shot = file.load_saved_shot_file("wip.json")
-            self.choice_reaching_collector = ChoiceReaching(
-                saved_shot["dataset"], saved_shot["config"]["batch_size"]
-            )
-            choice_reaching.MAX_BATCH_SIZE = saved_shot["config"]["batch_size"]
-            timer.IDLE_LIMIT = saved_shot["config"]["idle_limit"]
-            file.MAX_DATASET_SIZE = saved_shot["config"]["dataset_size"]
+            # load the WIP file
+            saved_shot = file_util.load_saved_shot_file("wip.json")
 
-            print(
-                f"""
-Configuration loaded:
-    Batch size: {choice_reaching.MAX_BATCH_SIZE} samples
-    Idle limit: {timer.IDLE_LIMIT / 60 / 1e9} minutes
-    Dataset size: {file.MAX_DATASET_SIZE / choice_reaching.MAX_BATCH_SIZE} batches, {file.MAX_DATASET_SIZE} samples\n"""
+            # initialize the collector with the contents of the WIP file
+            self.tracking_collector = TrackingCollector(
+                dataset=saved_shot["dataset"],
+                config=saved_shot["config"],
             )
 
         # otherwise, initialize the collector with a new dataset
         else:
             print("No `wip.json` file found. Initializing new dataset...\n")
-            self.choice_reaching_collector = ChoiceReaching()
+            self.tracking_collector = TrackingCollector()
 
         # initialize the listeners for mouse and keyboard
-        self.mouse_listener = MouseListener(self.choice_reaching_collector, self.timer)
+        self.mouse_listener = MouseListener(
+            self.tracking_collector, self.tracking_collector.timer
+        )
+
         self.keyboard_listener = KeyboardListener(
-            self.choice_reaching_collector, self.timer
+            self.tracking_collector, self.tracking_collector.timer
         )
 
         # initialize the menu
@@ -137,54 +61,57 @@ Configuration loaded:
         while True:
             try:
                 # check if hotkey is pressed
-                if self.keyboard_listener.hotkey in virtual_keyboard.global_hot_keys:
+                if self.keyboard_listener.hotkey in GLOBAL_HOTKEYS:
                     # respond to the hotkey
                     self.respond_to_hotkey()
 
-                # write the data to a file every n samples
-                if len(self.choice_reaching_collector.dataset) >= file.MAX_DATASET_SIZE:
-                    file.write_tracking_file(
+                # write the entire dataset to a file every n samples
+                if (
+                    len(self.tracking_collector.dataset)
+                    >= self.tracking_collector.max_dataset_size
+                ):
+                    file_util.write_tracking_file(
                         datetime.datetime.now().strftime("%Y%m%d-%H%M%S" + ".csv"),
-                        self.choice_reaching_collector.dataset,
+                        self.tracking_collector.dataset,
                     )
 
                     print("Dataset written to file.")
-                    self.choice_reaching_collector.reset_batch()
-                    self.choice_reaching_collector.reset_dataset()
+                    self.tracking_collector.reset_batch()
+                    self.tracking_collector.reset_dataset()
 
                     # remove the saved shot if it exists
-                    if os.path.exists(file.get_saved_shot_path("wip.json")):
-                        os.remove(file.get_saved_shot_path("wip.json"))
+                    if os.path.exists(file_util.get_saved_shot_path("wip.json")):
+                        os.remove(file_util.get_saved_shot_path("wip.json"))
 
                 # ask the user how they are feeling every n samples
                 elif (
-                    len(self.choice_reaching_collector.batch)
-                    >= choice_reaching.MAX_BATCH_SIZE
+                    len(self.tracking_collector.batch)
+                    >= self.tracking_collector.max_batch_size
                 ):
                     self.toggle_listening()
                     self.activate_window()  # bring the terminal to the front
 
                     # open the check-in menu and set the current feeling
                     check_in_choice = self.get_choice_from_menu("check-in")
-                    self.choice_reaching_collector.set_feeling(check_in_choice)
-                    self.choice_reaching_collector.add_batch()
-                    self.choice_reaching_collector.reset_batch()
+                    self.tracking_collector.set_feeling(check_in_choice)
+                    self.tracking_collector.add_batch()
+                    self.tracking_collector.reset_batch()
 
                     print(
-                        f"Dataset length {len(self.choice_reaching_collector.dataset)}/{file.MAX_DATASET_SIZE}"
+                        f"Dataset length {len(self.tracking_collector.dataset)}/{self.tracking_collector.max_dataset_size}"
                     )
                     self.toggle_listening()
 
                 # calculate the idle time
                 if (
-                    self.timer.greater_than_idle_limit()
-                    and len(self.choice_reaching_collector.batch) > 0
+                    self.tracking_collector.timer.greater_than_idle_limit()
+                    and len(self.tracking_collector.batch) > 0
                 ):
                     print("Idle limit reached. Batch has been reset.")
                     print(
-                        f"Dataset length {len(self.choice_reaching_collector.dataset)}/{file.MAX_DATASET_SIZE}"
+                        f"Dataset length {len(self.tracking_collector.dataset)}/{self.tracking_collector.max_dataset_size}"
                     )
-                    self.choice_reaching_collector.reset_batch()
+                    self.tracking_collector.reset_batch()
 
             except KeyboardInterrupt:
                 self.stop_listeners()
@@ -194,20 +121,13 @@ Configuration loaded:
         self.stop_listeners()
 
         if (
-            len(self.choice_reaching_collector.dataset) / choice_reaching.MAX_BATCH_SIZE
+            len(self.tracking_collector.dataset)
+            / self.tracking_collector.min_batch_size
             > 1
         ):
-            file.SAVED_SHOT_TEMPLATE["config"] = {
-                "batch_size": choice_reaching.MAX_BATCH_SIZE,
-                "idle_limit": timer.IDLE_LIMIT,
-                "dataset_size": file.MAX_DATASET_SIZE,
-            }
-
-            file.SAVED_SHOT_TEMPLATE["dataset"] = self.choice_reaching_collector.dataset
-
-            file.write_saved_shot_file(
+            file_util.write_saved_shot_file(
+                self.tracking_collector,
                 datetime.datetime.now().strftime("wip" + ".json"),
-                file.SAVED_SHOT_TEMPLATE,
             )
 
             print("\nProgress saved.")
@@ -247,10 +167,7 @@ Configuration loaded:
         """
         Respond to the hotkey pressed.
         """
-        if (
-            virtual_keyboard.global_hot_keys[self.keyboard_listener.hotkey]
-            == "main-menu"
-        ):
+        if GLOBAL_HOTKEYS[self.keyboard_listener.hotkey] == "main-menu":
             self.toggle_listening()
 
             # keep main menu open until the user quits
@@ -266,16 +183,16 @@ Configuration loaded:
             self.keyboard_listener.clear_hotkey()
             self.toggle_listening()
 
-        elif virtual_keyboard.global_hot_keys[self.keyboard_listener.hotkey] == "help":
-            print(usage)
+        elif GLOBAL_HOTKEYS[self.keyboard_listener.hotkey] == "help":
+            print(USAGE)
 
-        elif virtual_keyboard.global_hot_keys[self.keyboard_listener.hotkey] == "quit":
+        elif GLOBAL_HOTKEYS[self.keyboard_listener.hotkey] == "quit":
             self.quit()
 
-        elif virtual_keyboard.global_hot_keys[self.keyboard_listener.hotkey] == "chat":
+        elif GLOBAL_HOTKEYS[self.keyboard_listener.hotkey] == "chat":
             chat_session_variables = chat.launch(
                 session_variables={
-                    "feeling": self.choice_reaching_collector.feeling,
+                    "feeling": self.tracking_collector.feeling,
                     "user_name": self.user_name,
                 }
             )
@@ -300,13 +217,22 @@ Configuration loaded:
         """
         Execute the main menu choice.
         """
-        match console.menus["main-menu"]["options"][choice]:
+        match MENUS["main-menu"]["options"][choice]:
             case "[2] Check-in":
                 check_in_choice = None
                 while check_in_choice == None:
                     check_in_choice = action[choice]().chosen_menu_index
 
-                self.choice_reaching_collector.set_feeling(check_in_choice)
+                self.tracking_collector.set_feeling(check_in_choice)
+
+                # add batch to dataset if it has the minimum size
+                if (
+                    len(self.tracking_collector.batch)
+                    >= self.tracking_collector.min_batch_size
+                ):
+                    self.tracking_collector.add_batch()
+                    self.tracking_collector.reset_batch()
+
                 return True  # close the main menu
 
             case "[3] Mode":
@@ -320,7 +246,7 @@ Configuration loaded:
             case "[4] Config":
                 config_menu_exit = False
                 while not config_menu_exit:
-                    print(config_usage)
+                    print(CONFIG_USAGE)
                     # ensure valid config menu choice
                     config_choice = None
                     while config_choice == None:
@@ -342,13 +268,13 @@ Configuration loaded:
         """
         Execute the mode choice.
         """
-        match console.menus["mental-modes"]["options"][choice]:
+        match MENUS["mental-modes"]["options"][choice]:
             case "[1] normal":
-                self.set_mode(action[choice]())
+                self.tracking_collector.set_mode(action[choice]())
             case "[2] focus":
-                self.set_mode(action[choice]())
+                self.tracking_collector.set_mode(action[choice]())
             case "[3] custom":
-                self.set_mode(action[choice]())
+                self.tracking_collector.set_mode(action[choice]())
             case "[4] back":
                 action[choice]()
                 return False  # keep the main menu open
@@ -359,134 +285,27 @@ Configuration loaded:
         """
         Execute the config choice.
         """
-        match console.menus["config"]["options"][choice]:
+        match MENUS["config"]["options"][choice]:
             case "[1] Set batch size":
                 input_batch_size = action[choice]
-                self.set_batch_size(self.get_float_from_input(input_batch_size))
+                self.tracking_collector.set_batch_size(
+                    App.get_float_from_input(input_batch_size)
+                )
             case "[2] Set idle limit":
                 input_idle_limit = action[choice]
-                self.set_idle_limit(self.get_float_from_input(input_idle_limit))
+                self.tracking_collector.set_idle_limit(
+                    App.get_float_from_input(input_idle_limit)
+                )
             case "[3] Set dataset size":
                 input_dataset_size = action[choice]
-                self.set_dataset_size(self.get_float_from_input(input_dataset_size))
+                self.tracking_collector.set_dataset_size(
+                    App.get_float_from_input(input_dataset_size)
+                )
             case "[4] Back":
                 action[choice]()
                 return True  # close the config menu
 
         return False  # keep the config menu open
-
-    # TODO: Move static methods to a separate utility file
-    @staticmethod
-    def set_mode(mode):
-        """
-        Set the mode.
-        """
-        if mode == "custom":
-            Application.set_custom_mode()
-
-        else:
-            choice_reaching.MAX_BATCH_SIZE = modes[mode]["MAX_BATCH_SIZE"]
-            timer.IDLE_LIMIT = modes[mode]["IDLE_LIMIT"]
-            file.MAX_DATASET_SIZE = modes[mode]["MAX_DATASET_SIZE"]
-
-        mode_info = f"""
-{mode} mode
-    Batch size: {choice_reaching.MAX_BATCH_SIZE} samples
-    Idle limit: {timer.IDLE_LIMIT / 60 / 1e9} minutes
-    Dataset size: {file.MAX_DATASET_SIZE / choice_reaching.MAX_BATCH_SIZE} batches, {file.MAX_DATASET_SIZE} samples
-"""
-
-        print(mode_info)
-
-    @staticmethod
-    def set_custom_mode():
-        """
-        Set the custom mode.
-        """
-        # set the batch size
-        while True:
-            try:
-                choice_reaching.MAX_BATCH_SIZE = int(
-                    input("Enter the max batch size: ")
-                )
-                if choice_reaching.MAX_BATCH_SIZE < 100:
-                    print("Batch size must contain at least 100 samples.")
-                    continue
-                break
-            except ValueError:
-                print("Please enter a number.")
-                continue
-
-        # set the idle limit
-        while True:
-            try:
-                timer.IDLE_LIMIT = float(input("Enter the idle limit: ")) * 60 * 1e9
-                if timer.IDLE_LIMIT < 0.5:
-                    print("Idle limit must be at least 30 seconds.")
-                    continue
-                break
-            except ValueError:
-                print("Please enter a number.")
-                continue
-
-        # set the dataset size
-        while True:
-            try:
-                file.MAX_DATASET_SIZE = (
-                    int(input("Enter the max dataset size: "))
-                    * choice_reaching.MAX_BATCH_SIZE
-                )
-
-                if file.MAX_DATASET_SIZE < 1:
-                    print("Dataset size must contain at least one batch.")
-                    continue
-                break
-            except ValueError:
-                print("Please enter a number.")
-                continue
-
-    @staticmethod
-    def set_batch_size(batch_size):
-        """
-        Set the batch size.
-        """
-        # ensure the batch size is at least 100 samples
-        if batch_size < 100:
-            print("Batch size must contain at least 100 samples.")
-            return
-
-        # cast the batch size to an integer
-        choice_reaching.MAX_BATCH_SIZE = int(batch_size)
-        print(f"Batch size set to {choice_reaching.MAX_BATCH_SIZE} samples")
-
-    @staticmethod
-    def set_idle_limit(idle_limit):
-        """
-        Set the idle limit.
-        """
-        # ensure the idle limit is at least 30 seconds
-        if idle_limit < 0.5:
-            print("Idle limit must be at least 30 seconds.")
-            return
-
-        timer.IDLE_LIMIT = idle_limit * 60 * 1e9
-        print(f"Idle limit set to {timer.IDLE_LIMIT / 60 / 1e9} minutes")
-
-    @staticmethod
-    def set_dataset_size(dataset_size):
-        """
-        Set the dataset size.
-        """
-        # ensure the dataset size is at least one batch
-        if dataset_size < 1:
-            print("Dataset size must contain at least one batch.")
-            return
-
-        # cast the dataset size to an integer
-        file.MAX_DATASET_SIZE = int(dataset_size) * choice_reaching.MAX_BATCH_SIZE
-        print(
-            f"Dataset size set to {file.MAX_DATASET_SIZE / choice_reaching.MAX_BATCH_SIZE} batches, {file.MAX_DATASET_SIZE} samples"
-        )
 
     @staticmethod
     def get_float_from_input(input_action):

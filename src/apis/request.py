@@ -2,6 +2,7 @@ from apis.ext.prompts import system
 from apis.ext.prompts import assistant
 
 from apis.ext import openai
+import socket
 
 
 class Request:
@@ -20,8 +21,15 @@ class Request:
         Returns the response if the response is correct, otherwise, returns
         None.
         """
+        # check for internet connection
+        try:
+            socket.create_connection(("1.1.1.1", 53))
+        except OSError:
+            print("No internet connection.")
+            return None
+
+        # return None if the LLM is unable to correctly respond in 3 attempts.
         if attempt > 3:
-            # Return none if the LLM is unable to correctly respond in 3 attempts.
             return None
 
         # make a system request to the LLM
@@ -33,8 +41,11 @@ class Request:
         response_content = response.choices[0].message["content"]
 
         try:
-            response = eval(response_content)["response"]
+            response_text = eval(response_content)["response"]
             self.append_message(role="assistant", text=response_content)
+
+            print(self.messages)
+            return response_text
 
         except TypeError:
             print("TypeError: Assistant did not format response correctly.")
@@ -48,9 +59,6 @@ class Request:
             self.messages.append(system.get_syntax_error_prompt())
             self.make_request(attempt=attempt + 1, temperature=temperature)
 
-        print(self.messages)
-        return response
-
     def append_message(self, role, text):
         """
         Appends message to this array of messages to provide conversational
@@ -58,6 +66,14 @@ class Request:
         """
         # TODO: This may be a good spot to filter through the messages and send on the most recent messages or a summary of the conversation written by the LLM
         self.messages.append(system.get_message(role, text))
+
+    def pop_message(self):
+        """
+        Pops the last message from this array of messages. This can be used to
+        remove messages that not have been received by the LLM to prevent
+        message duplication which could use more tokens.
+        """
+        self.messages.pop()
 
     def append_context(self):
         """
